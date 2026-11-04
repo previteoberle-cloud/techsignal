@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # Core pipeline, offline. No changedetection.io, no network, no model key.
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[test]"
+      - run: python -m pytest -v
+      - run: python -m techsignal eval
+
+  ui:
+    # Research workbench: data layer + Streamlit script via streamlit.testing, then a real start-up.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[test,ui]"
+      - run: python -m pytest -v tests/ui
+      - name: Start the workbench and check it answers
+        run: |
+          python -m techsignal.workbench --server.port 8599 > /tmp/workbench.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8599/_stcore/health && break; sleep 1; done
+          curl -sf http://127.0.0.1:8599/_stcore/health
+          curl -sf http://127.0.0.1:8599/ | grep -q "<title>"
+
+  upstream-contract:
+    # Fixtures must still equal what the pinned changedetection.io's own report builder produces.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[test]"
+      - run: scripts/fetch_changedetection.sh .upstream/changedetection.io
+      - name: Fixture check and upstream-dependent tests
+        env:
+          TECHSIGNAL_CDIO_SOURCE: ${{ github.workspace }}/.upstream/changedetection.io
+        run: |
+          python -m techsignal.fixtures --check
+          python -m pytest -v tests/test_adapter.py
+
+  live-cdio:
+    # Optional: a real changedetection.io (pinned commit) + real public sources on GitHub.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: scripts/fetch_changedetection.sh .upstream/changedetection.io
+      - name: Install changedetection.io requirements and TechSignal
+        run: |
+          pip install -r .upstream/changedetection.io/requirements.txt
+          pip install -e ".[test]"
+      - name: Online integration tests
+        env:
+          TECHSIGNAL_CDIO_SOURCE: ${{ github.workspace }}/.upstream/changedetection.io
+          # the workflow's own token, only to read public commit metadata from api.github.com
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: TECHSIGNAL_CDIO_PYTHON="$(which python)" TECHSIGNAL_LIVE_NETWORK=1 python -m pytest -v tests/integration

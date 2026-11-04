@@ -92,11 +92,11 @@ Tenstorrent 新一代 AI 加速芯片 **Blackhole** 的大模型推理软件支�
 只做离线回放，不需要网络，也不需要 changedetection.io：
 
 ```bash
-cd techsignal && python -m pytest tests/test_r2_real_case.py
+python -m pytest tests/test_r2_real_case.py
 ```
 
 在线重跑：需要装有 changedetection.io 依赖的 Python，并能访问 GitHub：
 
 ```bash
-cd techsignal && python -m techsignal.live --python /path/to/python --case cases/tenstorrent_blackhole/case.json --out /tmp/case_out
+python -m techsignal.live --python /path/to/python --case cases/tenstorrent_blackhole/case.json --out /tmp/case_out
 ```

@@ -1,201 +1,176 @@
-# TechSignal（R1 研究原型）
+# TechSignal
 
-TechSignal 读取 [changedetection.io](https://github.com/dgtlmoon/changedetection.io) 输出的网页变化数据，判断这些变化对**既有研究判断**的影响，并生成带证据编号、可校验的中文管理层速览。
+**用证据跟踪硬科技公司的公开信息变化，判断它对既有研究结论的影响。**
 
-> **状态说明（R4）：** 已真实运行的部分：规则研判、证据台账、中文简报与引用校验、changedetection.io API Client、跨批次历史、**有界补证**（确定性策略，真实调用 changedetection.io 和 GitHub）、**全中文研究工作台**（浏览器界面，可离线打开真实案例）。已对真实运行的 changedetection.io 实例和真实公开来源（Tenstorrent 官方 GitHub 仓库）在线验证。**还没有任何真实大模型参与**：所有判断都由确定性规则作出；也**不是持续自动监控**，目前是按需运行和历史版本回放。详见 [docs/R4_ACCEPTANCE.md](docs/R4_ACCEPTANCE.md)。
+> *English summary* — TechSignal turns raw web-page changes captured by [changedetection.io](https://github.com/dgtlmoon/changedetection.io) into cited, reviewable research judgements: does a new change **support**, **weaken** or **not affect** an existing investment thesis, or is the evidence **insufficient**? It keeps an evidence ledger, tracks judgements across batches, runs a bounded, deterministic evidence-gathering step with real tools (allow-listed, budgeted, fully traced), and ships a Chinese browser workbench. It does **not** use any LLM today, and it is a research prototype, not a production service.
 
-## 与 changedetection.io 的分工
+![工作台：跨批次总览](docs/screenshots/r4_02_cross_batch_overview.png)
 
-| | changedetection.io（上游，未修改） | TechSignal（本模块） |
+## 1. 解决什么问题
+
+研究人员跟踪一家硬科技公司时，常常要回答：「官网、文档、仓库里**这条新变化**，会不会动摇我之前的判断？」
+
+网页监控工具只能告诉你「页面变了」。TechSignal 进一步回答下面这些问题，并且每个回答都给出证据编号：
+
+- 这条变化与哪一条**研究判断、哪一条关键假设**有关？
+- 它是**支持**、**削弱**、**无关**，还是**证据不足、需要核实**？
+- 证据来自谁？等级如何？是什么时候**发布**的，又是什么时候被**抓取**的？
+- 遇到不确定的情况，系统**主动查了什么**？查到了没有？**还剩什么需要人来核实**？
+
+系统永远不会自动修改研究结论。「削弱」只会触发「建议研究负责人复核」。
+
+## 2. 与 changedetection.io 的关系与区别
+
+| | changedetection.io（上游，独立项目） | TechSignal（本项目） |
 |---|---|---|
-| 回答的问题 | 这个网页变了什么 | 这对我们的研究判断意味着什么，证据够不够 |
-| 输出 | 快照、diff、通知；可选的 AI 是否重要和摘要 | 支持 / 削弱 / 无关 / 证据不足、证据等级、待核实问题、建议动作 |
-| 状态 | 每个监测项独立 | 研究判断库（只读）+ 证据台账（JSONL） |
+| 回答的问题 | 网页变了什么 | 这对研究判断意味着什么，证据够不够 |
+| 输入 | 网页、RSS、PDF | changedetection.io 的变化数据（REST API） |
+| 输出 | 快照、差异、通知 | 研判结论、证据台账、跨批次历史、补证轨迹、中文速览 |
+| 状态 | 监测项与快照 | 研究判断（只读）、证据台账、研判历史 |
 
-上游已有的 AI 能力（`llm_intent` 过滤、AI 变化摘要、MCP Server）属于上游，不算本模块的贡献。本模块不修改 `changedetectionio/` 下的任何文件。
+**依赖关系：** TechSignal 通过 HTTP 读取一个**正在运行的** changedetection.io 实例，本仓库不包含、也没有修改它的源码。没有 changedetection.io 时，TechSignal 照样可以安装、测试，并打开已保存的真实案例。抓取网页、存储快照、计算差异，都是 changedetection.io 作者和贡献者的工作；本项目只负责其后的研判部分。
 
-## 研究工作台（R4）
+## 3. 本项目独立实现的部分
+
+| 模块 | 作用 |
+|---|---|
+| `techsignal/adapters/cdio.py`、`cdio_client.py` | 按 changedetection.io 的 API 契约校验并解析变化报告；HTTP 客户端（鉴权、超时、重试、分页、错误分类） |
+| `triage.py`、`rules.py`、`assess.py` | 降噪；去重（按「内容 + 研究对象」，高等级来源不会被低等级来源当作重复）；实体、主题和关键假设信号规则（否定语境、删除内容不会给出方向）；证据等级闸门；来源冲突不自动裁决 |
+| `store.py`、`pipeline.py` | 证据台账（JSONL，校验通过后才写盘）；跨批次研判历史 |
+| `brief.py`、`validate.py`、`provenance.py` | 中文速览；引用完整性校验（事实没有来源就报错）；来源声明按运行元数据生成 |
+| `verify/` | **有界补证**：确定性触发与规划；白名单（每次重定向都重新检查）；每项最多 3 次调用；超时、重试、去重；工具输出只当作数据；完整执行轨迹 |
+| `providers.py` | 模型层接口（目前只有 Mock 回放和协议测试，**没有接入真实模型**） |
+| `workbench/` | 全中文 Streamlit 研究工作台 |
+| `live.py`、`fixtures.py` | 开发工具：启动真实 changedetection.io 做端到端验证；用上游的报告生成器制作测试数据 |
+
+## 4. 架构与数据流
+
+```
+                 changedetection.io（外部服务，可选）
+                         │  GET /api/v1/changes（或已保存的响应）
+                         ▼
+ ChangesReport ─► 适配器校验 ─► 降噪 / 去重 ─► 证据台账（编号、来源、等级、可追溯路径）
+                                          │
+                     研究判断（JSON，只读） ─┤
+                                          ▼
+                      规则研判：支持 / 削弱 / 无关 / 证据不足
+                      ├─ 证据等级闸门（C/D 级不能单独定向）
+                      ├─ 同批次冲突与跨批次历史比对（不自动裁决）
+                      └─ 有疑点 ─► 有界补证（白名单内的真实工具调用）
+                                     └─► 新证据独立编号 ─► 用同一套规则复评
+                                          ▼
+          中文速览 + 引用校验 ─► 原子提交输出 ─► 研究工作台（浏览器）
+```
+
+## 5. 快速开始（干净环境）
+
+需要 Python 3.11 或以上版本。不需要 Docker、模型密钥或 changedetection.io。
 
 ```bash
-cd techsignal
-pip install -e ".[ui]"
-python -m techsignal.workbench          # 浏览器打开 http://localhost:8501
-```
-
-全中文的浏览器界面，共六个页面：总览、管理层速览、研究判断、变化时间线、补证过程、证据详情。默认展示真实的 Tenstorrent 历史案例，不需要网络、Docker 或模型密钥。
-
-- **历史实测演示：** 只读展示已保存的在线实测结果。
-- **离线回放：** 用保存的原始数据重新运行研判流水线，结果写入临时目录，不覆盖已保存的案例。
-- **在线连接：** 连接你自己的 changedetection.io，拉取变化并研判。
-
-可以点击证据编号跳转到该证据的详情，可以展开完整补证轨迹，可以下载中文速览。
-
-| 总览 | 变化时间线 | 补证过程 |
-|---|---|---|
-| ![总览](docs/screenshots/r4_02_cross_batch_overview.png) | ![时间线](docs/screenshots/r4_04_timeline.png) | ![补证](docs/screenshots/r4_07_verification_full.png) |
-
-## 能力演进（R1–R4）
-
-| 轮次 | 新增的真实能力 | 仍是模拟或尚未实现 |
-|---|---|---|
-| R1 | 规则研判、证据台账、中文简报、引用校验、虚构场景测试 | 模型层仅有 Mock |
-| R1.1 | 修复跨企业去重、失败保护、多假设归因 | — |
-| R2 | changedetection.io API Client、真实实例在线验证、真实公开案例、跨批次历史 | 模型层仅有协议测试 |
-| R3 | 来源声明按运行元数据生成；有界补证（真实工具、白名单、执行轨迹） | 补证决策没有使用模型 |
-| R4 | 全中文研究工作台（离线可用、可交互、可回放）；修复多批次证据来源地址；简报补证记录中文化 | 持续监控、模型推理、新建判断的界面 |
-
-## 处理流程
-
-```
-ChangesReport JSON ──▶ adapters/cdio.py   按契约校验（docs/api-spec.yaml#ChangesReport）
-                      triage.py           去掉无净差异、监测报错、噪声、位置移动和重复内容（确定性）
-                      store.py            证据入台账：来源、等级、cdio 追溯路径，按内容哈希编号
-                      rules.py            实体与主题匹配 + 关键假设信号规则（确定性）
-                      assess.py           规则能判定的直接判定；不能判定的交给模型层 Provider
-                                          → 校验模型输出 → 证据等级闸门 → 来源冲突处理
-                      brief.py            中文速览：每条陈述标注类型与引用
-                      validate.py         引用完整性校验，不通过就不写出文件
-```
-
-**分层原则：**
-- 规则层只在信号明确时判定：信号出现在新增内容里、没有否定词、所有信号方向一致。否定语境、删除内容、方向混合、只命中主题词这几种情况都交给模型层。没有配置模型时，一律判为「证据不足」。
-- 模型层的输出必须引用本次变化的证据编号，并指明对应的关键假设，否则会被拒绝并降级。模型判断的置信度最高只给 medium，并且自动附带「需人工确认」。
-- 证据等级闸门：只有 A（官方一手）或 B（监管文件、权威媒体）来源才能单独支撑「支持」或「削弱」。C 或 D 级来源会降级为「证据不足」，但保留初步方向。
-- 来源冲突：同一条假设同时出现支持和削弱时，系统不裁决，冲突各方都降为「证据不足」，并列出冲突证据。
-- 研究判断库只读：「削弱」最多只触发「建议复核」，`thesis_status_change` 恒为 `none`。
-- 去重键 = 规范化内容指纹 + 研究对象（命中的 thesis 编号）。两家企业的同一段文字不会互相吞掉；同一研究对象的转载照常去重；高等级来源晚到时不会被当作重复。
-- 一条变化命中多个关键假设时，逐条生成评估，不只取第一个；同一变化里支持与削弱并存时，不判方向，但会列出全部信号。
-- 失败不破坏已有结果：证据台账只在校验通过后写盘；CLI 先把四个输出文件写到 `out/.techsignal-staging-*`，全部成功后再逐个 `os.replace` 到位。输入错误、校验失败、模型异常、写盘错误都以退出码 2 结束，上一次的输出保持不变。
-
-## 快速开始
-
-需要 Python 3.11 或以上版本。运行时依赖只有 `pydantic`，测试另需 `pytest`。不需要安装 changedetection.io 的依赖。
-
-```bash
-cd techsignal
+git clone <本仓库地址> TechSignal && cd TechSignal
 python -m venv .venv && . .venv/bin/activate
-pip install -e ".[test]"
+pip install -e ".[test,ui]"
 ```
 
-运行演示（Mock 回放）：
-
-```bash
-python -m techsignal run --changes demo/changes_report.json --theses demo/theses.json --sources demo/sources.json --provider mock --replay demo/mock_replay.json --out demo/output
-```
-
-对已生成的简报做引用校验：
-
-```bash
-python -m techsignal validate --out demo/output --theses demo/theses.json
-```
-
-跑测试：
+运行离线测试：
 
 ```bash
 python -m pytest
 ```
 
-跑场景评测：
+启动研究工作台，然后在浏览器打开 http://localhost:8501：
 
 ```bash
-python -m techsignal eval
+python -m techsignal.workbench
 ```
 
-确认 Fixture 与上游 `changes_report.py` 的当前输出一致：
+在工作台里：
+1. 选择「Tenstorrent Blackhole：跨批次跟踪」案例；
+2. 依次查看总览、变化时间线、补证过程、证据详情；
+3. 在「管理层速览」下载中文速览；
+4. 把「数据来源」切到「离线回放」，用保存的数据重新运行一次研判。
+
+命令行演示（虚构数据，Mock 回放模型层）：
 
 ```bash
-python -m techsignal.fixtures --check
+python -m techsignal run --changes demo/changes_report.json --theses demo/theses.json --sources demo/sources.json --provider mock --replay demo/mock_replay.json --out /tmp/out
 ```
 
-演示输出已提交在 `demo/output/`：`brief.md`、`brief.json`、`decision_log.json`、`evidence.jsonl`。端到端测试会重新生成这些文件，并要求逐字节一致。
-
-### 接入真实模型（R1 未验证）
-
-`--provider openai-compatible` 会读取以下三个环境变量：`TECHSIGNAL_LLM_BASE_URL`（例如 `http://localhost:11434/v1`）、`TECHSIGNAL_LLM_MODEL` 和 `TECHSIGNAL_LLM_API_KEY`。这个 Provider 在 R1 中只用注入的假传输层测过请求构造和响应解析，**没有对任何真实模型服务运行过**。
-
-## 在线使用：连接 changedetection.io
+连接你自己的 changedetection.io（API key 只从环境变量读取，不会写入任何文件）：
 
 ```bash
-export TECHSIGNAL_CDIO_API_KEY=...   # changedetection.io 设置页中的 API key；只从环境变量读取
-python -m techsignal run --cdio-url http://localhost:5000 --from 1790812800 --theses my/theses.json --sources my/sources.json --out out/
+export TECHSIGNAL_CDIO_API_KEY=...
+python -m techsignal run --cdio-url http://localhost:5000 --from 1790812800 --theses my/theses.json --sources my/sources.json --out out/ --track-history
 ```
 
-可选参数：`--to`、`--tag`、`--uuids`、`--page-size`、`--max-lines`、`--timeout`。在线模式会额外写出 `source_changes_report.json`（原始响应）和 `run_record.json`（地址、参数、拉取时间、响应 sha256，不含密钥）。
+## 6. 真实案例：Tenstorrent Blackhole
 
-加上 `--track-history` 进入跨批次模式：证据台账和 `judgements.jsonl` 会累积；新证据与同一假设的历史判断方向相反时，降级并列出冲突证据；简报会说明每个假设「之前 → 现在」的变化，研究结论本身不会被改动。
+- **研究问题：** Tenstorrent 新一代 AI 芯片 Blackhole 的大模型推理软件是否成熟？70B 级模型是否已进入官方支持？
+- **数据：** 官方开源仓库 [tenstorrent/tt-metal](https://github.com/tenstorrent/tt-metal) README 的三个提交版本，由**真实的 changedetection.io 实例**抓取。完整过程见 [cases/tenstorrent_blackhole/README.md](cases/tenstorrent_blackhole/README.md)。
 
-真实实例端到端（需要装有 changedetection.io 依赖的 Python）：
+| 批次 | 版本（发布时间） | 系统研判 | 补证 |
+|---|---|---|---|
+| 1 | `4cd196f → 168a956`（2025-07-11）：新增「Llama 3.1 70B (TP=4) QuietBox (Blackhole)」 | 假设 BH1「尚无 70B 官方记录」被**削弱**（A 级官方证据） | 不触发（判断明确） |
+| 2 | `168a956 → 62f3cd0`（2025-08-12）：README 改版为精选列表，该行消失 | **证据不足，待核实**：信号只出现在删除侧，不翻转历史判断 | 触发 3 次真实查询：同页快照、官方提交说明、同版本模型文档。取得新的官方证据，但无法区分「文档重排」和「撤回支持」，**保持待核实** |
 
-```bash
-python -m techsignal.live --python /path/to/python --case cases/tenstorrent_blackhole/case.json --out /tmp/out
-```
+![补证过程](docs/screenshots/r4_07_verification_full.png)
 
-真实公开案例：[cases/tenstorrent_blackhole/](cases/tenstorrent_blackhole/README.md)。
+这个案例的意义在于：在信息不足时，系统**如实保留不确定性**，而不是硬给结论。
 
-## 有界补证（R3）
+## 7. 测试与可量化结果
 
-```bash
-python -m techsignal run --cdio-url http://localhost:5000 --from 1790812800 --theses ... --sources ... --out out/ --track-history --verify --verify-policy my/verify_policy.json
-```
-
-- **何时触发：** 只在研判存在具体疑点时补证——信号只出现在删除或否定语境中、有冲突证据、低等级来源带方向、跨批次无法定向。裁定明确的研判和无关变化不触发。
-- **用什么工具：** changedetection.io 快照检索（只限本次 `--cdio-url` 实例）、GitHub 指定版本的文件检索、GitHub 提交元数据。规划由确定性代码完成：同页最新快照 → 引起变化的提交 → 疑点内容中的官方相对链接。
-- **控制：** 白名单（主机、端口、路径前缀完全匹配，每跳重定向都重新检查）；每项最多 3 次调用，另有每次运行的总上限；超时、重试、调用去重和停止条件；工具输出只当作数据，疑似提示注入的行会被排除。
-- **结果：** 新证据独立编号（`obtained_via=verification_tool`），交给同一套规则复评；没有命中规则就保持「尚未核实」。每次调用都写入 `verification_trace.json`，简报中有「补证记录」一节。
-- **结论只读：** 研究判断永远不会被改写；补证失败时，已有输出、台账和历史保持不变。
-
-## 来源声明
-
-简报开头的声明都根据运行元数据生成（`provenance.py`），包括：在线拉取或离线文件；离线回放必须用 `--input-record` 提供在线运行记录并核对 sha256；数据是虚构还是公开资料；模型层是未配置、Mock 回放还是真实模型；是否执行了补证。
-
-## changedetection.io 数据契约
-
-适配器解析的是 `GET /api/v1/changes?format=json` 的返回。契约依据：
-- `changedetectionio/api/Changes.py`
-- `changedetectionio/changes_report.py`：`group_changes()` 和 `watch_changes()`
-- `docs/api-spec.yaml`：`components.schemas.ChangesReport`
-
-Fixture 不是手写的，而是 `techsignal/fixtures.py` 按文件路径加载上游 `changes_report.py`（它只依赖标准库），用最小的替身 Watch 对象调用真实的 `group_changes()` 生成。快照文本是人工虚构的。在线 HTTP 拉取和 Webhook 接收尚未实现。
-
-追溯：每条证据都记录了 `cdio_difference_path`，即 `/api/v1/watch/{uuid}/difference/{from}/{to}`，在真实部署中可以用它回查原始差异。
-
-## 证据等级与陈述类型
-
-| 等级 | 含义 |
+| 项目 | 结果 |
 |---|---|
-| A | 公司官方一手披露 |
-| B | 监管文件或权威媒体 |
-| C | 二手转述或第三方分析 |
-| D | 未经证实，包括论坛、匿名来源和未登记域名（默认值） |
+| 离线测试 | 见 [docs/R5_ACCEPTANCE.md](docs/R5_ACCEPTANCE.md) 中干净克隆下的实测数字；不需要网络、模型或 changedetection.io |
+| 虚构场景评测 | 23/23 场景通过（`python -m techsignal eval`）。场景和预期都由开发者编写，只说明行为符合设计，**不代表真实准确率** |
+| 变异检验 | 故意关闭等级闸门、冲突处理、去重主体、台账写盘顺序、多假设归因等保护，对应测试都会失败（见各轮验收记录） |
+| 在线集成 | 4 个测试：真实 changedetection.io（固定上游版本）加真实 GitHub 来源，包括真实补证 |
+| 浏览器验收 | 用 Chromium 实测六个页面：无横向溢出、证据跳转、轨迹展开、下载、离线回放都正常；截图见 `docs/screenshots/` |
+| CI | `test`（3.11 / 3.13）、`ui`（工作台测试 + 真实启动）、`upstream-contract`（与固定上游版本的报告生成器比对）、`live-cdio`（可选的在线集成） |
 
-| 陈述类型 | 校验规则 |
-|---|---|
-| fact（事实） | 必须引用台账中存在的证据 |
-| inference（判断） | 必须引用证据，否则只能写成 speculation |
-| speculation（推测） | 渲染时标注「推测，无证据支撑」 |
-| context（历史结论） | 必须引用存在的研究判断编号 |
-| question / action | 待核实问题、建议动作 |
+## 8. 关键设计决策
 
-Markdown 层还会检查：所有 `[EV-…]`、`[TH-…]` 都能追溯到证据或研究判断；「新增信息」「来源」「证据等级」下的每一行都带证据编号；使用了 Mock 时必须有披露声明。
+- **规则优先，模型可替换。** 规则只在信号明确时给出方向；否定语境、删除内容、方向混合都不定向。模型层预留了接口，输出必须引用存在的证据，置信度最高为中。
+- **不确定性是一等公民。** 证据不足、来源冲突、跨批次无法定向，都会被明确标出，并给出待核实问题；系统从不改写研究结论。
+- **证据可追溯。** 每条陈述都带证据编号或研究判断编号，校验不通过就不写出文件。发布时间（提交记录）与抓取时间分开记录。
+- **补证有边界。** 只在有疑点时触发；白名单精确到主机、端口和路径；每项最多 3 次调用；工具输出只当作数据；失败时如实记录，不影响已有状态。
+- **失败安全。** 输出先写到暂存区，替换失败就回滚；API key 和日志按调用显式传递，并发会话互不影响。
+- **来源诚实。** 简报声明根据运行元数据生成，离线回放必须核对 sha256。
 
-## 测试
+## 9. 尚未实现与限制
 
-离线测试共 216 个（其中 31 个为工作台测试，界面脚本测试需要安装 `.[ui]`），另有 4 个需显式开启的在线测试（`tests/integration/`，需要真实的 changedetection.io 和 GitHub 访问）。离线测试包括 23 个虚构场景（S21–S23 和 `test_r11_*.py` 为 R1.1 反例回归），以及 R2 新增的 API Client、真实案例回放、模型协议、跨批次测试。场景覆盖：有效变化、支持、削弱、两类无关、两类噪声、两类重复、来源冲突、低等级证据、无信号、Mock 判定、模型错误引用、模型缺失、否定语境、无净差异、截断加报错，以及三类异常输入。各场景的结果见 [docs/R1_ACCEPTANCE.md](docs/R1_ACCEPTANCE.md)。
+- **没有真实大模型推理：** 所有研判与补证决策都是确定性规则；没有获得授权的模型服务。
+- **没有持续后台监控：** 没有调度和通知，按需运行；真实案例是对历史版本的观测回放。
+- **只有一个真实研究案例**，没有标注数据集，不能代表通用准确率。
+- **研究判断、信号规则和补证白名单需要手写 JSON**，正则规则对写法敏感（案例中 README 改版后规则就失效了）。
+- **工作台只面向本机使用：** 没有登录与权限，没有做安全加固，**不适合直接部署到公网或多用户环境**。
+- 补证工具目前只覆盖 changedetection.io 快照和 GitHub；官网、新闻稿、监管披露还需要新的适配器。
 
-评测指标只说明代码行为与人工标注的预期一致。场景和预期都由开发者编写，**不代表真实世界的准确率**。
+## 10. 开发者：可选的上游依赖
 
-## 已知局限
+只有两类开发任务需要 changedetection.io 源码：
 
-- 信号规则是分析师手写的正则，存在漏判。开发中实际遇到过一次：「取消向澜芯光电采购 1.6T 光模块的订单」超出了原先 12 字的匹配窗口。
-- 实体匹配用的是子串匹配，没有消歧（例如同名公司）。
-- 噪声规则把只有数字的行也视为噪声，对价格类页面不适用。
-- 去重只识别规范化后完全相同的内容，不识别同义改写。
-- 「研究对象」目前以 thesis 为粒度：若一条 thesis 跟踪多家公司，这些公司之间的同文内容仍会被视为重复。实体级标准 ID 留待后续。
-- 输出提交是逐文件原子的，四个文件作为一组并非原子：进程恰好在两次 `os.replace` 之间被杀时可能新旧混合。已按「台账先、brief.md 最后」排序，降低影响。
-- 补证决策和研判没有使用大模型；检索只能做词语和正则匹配，无法理解表格以外的语义。
-- 不是持续自动监控：没有定时任务和通知；研究判断、规则和白名单都要手写 JSON。
-- 没有结论版本管理；研究判断只读，修改要由人来做。
+1. 用上游的报告生成器重新生成或校验测试数据；
+2. 启动真实实例做集成测试。
 
-## 许可与署名
+```bash
+scripts/fetch_changedetection.sh                       # 克隆固定提交 5e086dd 并校验 sha256
+export TECHSIGNAL_CDIO_SOURCE="$PWD/.upstream/changedetection.io"
+python -m techsignal.fixtures --check                  # 测试数据与上游输出一致性
+pip install -r .upstream/changedetection.io/requirements.txt
+TECHSIGNAL_CDIO_PYTHON="$(which python)" TECHSIGNAL_LIVE_NETWORK=1 python -m pytest tests/integration
+```
 
-本模块以 Apache-2.0 发布，构建在 changedetection.io（Apache-2.0，Copyright Leigh Morresi and contributors）之上，以 API 数据契约集成，未修改其源代码。按照上游 `NOTICE`，changedetection.io 的名称和 Logo 不在授权范围内，本项目不使用其品牌。
+## 11. 开发历程与文档
+
+本项目先在 changedetection.io 的 Fork 中以独立目录开发（`techsignal/`，PR #1），后用 `git subtree split` 提取为本仓库，**完整保留了 R1–R5 的提交历史**。
+
+- 各轮记录：[R1](docs/R1_ACCEPTANCE.md)、[R2](docs/R2_ACCEPTANCE.md)、[R3](docs/R3_ACCEPTANCE.md)、[R4](docs/R4_ACCEPTANCE.md)、[R5](docs/R5_ACCEPTANCE.md)。早期记录中的 `techsignal/...` 路径指的是 Fork 中的目录。
+- 技术细节：[docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md)。
+- 演示讲解稿：[docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)。
+
+**开发方式：** 代码在 Claude Code 中编写，提交的作者字段为 Claude。需求拆分、各轮验收与复核由项目所有者完成（见各轮验收记录中的 Owner 决定）。
+
+## 许可
+
+Apache-2.0，见 [LICENSE](LICENSE)。第三方署名见 [NOTICE](NOTICE)，包括 changedetection.io 与 tenstorrent/tt-metal。本项目与 changedetection.io、Tenstorrent 均无隶属关系。

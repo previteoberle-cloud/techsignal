@@ -8,6 +8,7 @@ written by the TechSignal CLI (brief.json, brief.md, decision_log.json, evidence
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -21,6 +22,17 @@ from . import labels as L
 
 TECHSIGNAL_ROOT = Path(__file__).resolve().parent.parent.parent
 CASES_ROOT = TECHSIGNAL_ROOT / "cases"
+
+
+def default_cases_root() -> Path:
+    """TECHSIGNAL_CASES_ROOT, else the project's cases/ (a clone installed with pip install -e),
+    else ./cases in the current directory (a non-editable install started from the clone)."""
+    env = os.getenv("TECHSIGNAL_CASES_ROOT")
+    if env:
+        return Path(env)
+    if CASES_ROOT.is_dir():
+        return CASES_ROOT
+    return Path.cwd() / "cases"
 _MD_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
 
 
@@ -110,8 +122,9 @@ def load_case(case_path: Path) -> CaseRef:
                    observation_path=out / "observation_record.json", batches=batches, raw=c)
 
 
-def discover_cases(root: Path = CASES_ROOT) -> tuple[list[CaseRef], list[str]]:
+def discover_cases(root: Path | None = None) -> tuple[list[CaseRef], list[str]]:
     """All loadable cases under `root`, plus readable problems for the ones that are not."""
+    root = Path(root) if root is not None else default_cases_root()
     cases, problems = [], []
     if not Path(root).exists():
         return [], [f"案例目录不存在：{root}"]

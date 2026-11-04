@@ -5,7 +5,6 @@
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import streamlit as st
@@ -56,7 +55,7 @@ def evidence_buttons(ids: list[str], key: str) -> None:
 
 
 def cases_root() -> Path:
-    return Path(os.getenv("TECHSIGNAL_CASES_ROOT") or vm.CASES_ROOT)
+    return vm.default_cases_root()
 
 
 # ---------------------------------------------------------------------------

@@ -13,8 +13,8 @@ Report shape:
 `diff` is difflib.unified_diff(..., fromfile=<ISO ts>, tofile=<ISO ts>, n=context, lineterm='')
 joined with '\n'. When truncated, a final line "... N more lines, see /api/v1/watch/..." is appended.
 
-R1 parses this offline (fixtures produced by the upstream builder). A live HTTP client against a
-running changedetection.io instance is NOT part of R1.
+The live HTTP client is techsignal/cdio_client.py; this module only validates and parses a report,
+whether it was fetched live or read from a saved file.
 """
 from __future__ import annotations
 

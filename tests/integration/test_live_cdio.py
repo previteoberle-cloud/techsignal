@@ -3,7 +3,8 @@
 Opt-in, because they need changedetection.io's own dependencies (pip install -r requirements.txt):
   TECHSIGNAL_CDIO_PYTHON=/path/to/python   python with changedetection.io's requirements installed
   TECHSIGNAL_LIVE_NETWORK=1                also run the real public-source case (needs GitHub access)
-CI runs both in the `live-cdio` job of .github/workflows/techsignal.yml.
+  TECHSIGNAL_CDIO_SOURCE=/path/to/changedetection.io  source checkout (scripts/fetch_changedetection.sh)
+CI runs them in the `live-cdio` job.
 """
 import json
 import os
@@ -15,8 +16,14 @@ from conftest import DEMO, ROOT
 from techsignal.cli import main
 from techsignal.live import LiveCdio, run_case
 
+from techsignal import upstream  # noqa: E402
+
 PY = os.getenv("TECHSIGNAL_CDIO_PYTHON")
-pytestmark = pytest.mark.skipif(not PY, reason="set TECHSIGNAL_CDIO_PYTHON to run against a real changedetection.io")
+pytestmark = [
+    pytest.mark.skipif(not PY, reason="set TECHSIGNAL_CDIO_PYTHON to run against a real changedetection.io"),
+    pytest.mark.skipif(upstream.cdio_source() is None,
+                       reason="no changedetection.io source: run scripts/fetch_changedetection.sh or set TECHSIGNAL_CDIO_SOURCE"),
+]
 
 
 class Page:

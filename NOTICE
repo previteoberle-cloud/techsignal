@@ -1,0 +1,29 @@
+TechSignal
+Copyright 2026 the TechSignal authors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+TechSignal is a separate project that works WITH changedetection.io; it does not include or modify
+changedetection.io's source code.
+
+changedetection.io
+  https://github.com/dgtlmoon/changedetection.io
+  Copyright (c) Leigh Morresi and the changedetection.io contributors. Licensed under Apache-2.0.
+  - TechSignal reads data from a running changedetection.io instance through its public REST API
+    (/api/v1/...). The API contract was taken from changedetection.io's code and docs/api-spec.yaml.
+  - TechSignal was first developed inside a fork of changedetection.io (techsignal/ directory of
+    previteoberle-cloud/changedetection.io, PR #1); this repository's history was extracted from it
+    with `git subtree split` and contains only the techsignal/ directory.
+  - Optional developer tooling (techsignal/fixtures.py, techsignal/live.py and the integration tests)
+    loads or starts changedetection.io from a SEPARATE checkout of the upstream repository, pinned to
+    commit 5e086dddf83e6ff4f43751db2386a33e006b1e3b (scripts/fetch_changedetection.sh). Nothing from
+    that checkout is copied into this repository.
+  - The changedetection.io name and logo are trademarks of their owners and are not used as the name
+    or branding of this project.
+
+tenstorrent/tt-metal
+  https://github.com/tenstorrent/tt-metal
+  Copyright Tenstorrent Inc. Licensed under Apache-2.0.
+  - cases/tenstorrent_blackhole/ contains short verbatim excerpts of the public README.md and
+    models/tt_transformers/README.md at specific commits (4cd196f, 168a956, 62f3cd0), used as cited
+    evidence for a demonstration research case. Every excerpt carries its source URL and commit.

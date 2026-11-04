@@ -1,7 +1,9 @@
 """Build ChangesReport fixtures with changedetection.io's OWN report builder.
 
 changedetectionio/changes_report.py imports only difflib/datetime, so it can be loaded by file path
-without installing changedetection.io's dependencies. We feed it minimal stand-in watch objects that
+without installing changedetection.io's dependencies. The upstream source is optional and located
+by techsignal.upstream (TECHSIGNAL_CDIO_SOURCE, or scripts/fetch_changedetection.sh for the pinned
+commit); without it, fixture checks are skipped, nothing else is affected. We feed it minimal stand-in watch objects that
 expose exactly the attributes it reads (history, get_history_snapshot, label, last_changed, get) and
 store its real output. That keeps fixtures faithful to GET /api/v1/changes?format=json.
 
@@ -15,15 +17,17 @@ import json
 import sys
 from pathlib import Path
 
-TECHSIGNAL_ROOT = Path(__file__).resolve().parent.parent
-UPSTREAM_REPORT_MODULE = TECHSIGNAL_ROOT.parent / "changedetectionio" / "changes_report.py"
+from . import upstream
+
+TECHSIGNAL_ROOT = upstream.PROJECT_ROOT
 
 
 def load_upstream_builder():
-    """The upstream changes_report module, or None when TechSignal runs outside the fork."""
-    if not UPSTREAM_REPORT_MODULE.exists():
+    """The upstream changes_report module, or None when no changedetection.io source is available."""
+    path = upstream.changes_report_path()
+    if path is None:
         return None
-    spec = importlib.util.spec_from_file_location("_cdio_changes_report_upstream", UPSTREAM_REPORT_MODULE)
+    spec = importlib.util.spec_from_file_location("_cdio_changes_report_upstream", path)
     mod = importlib.util.module_from_spec(spec)
     # don't leave a __pycache__ behind inside the upstream package
     previous, sys.dont_write_bytecode = sys.dont_write_bytecode, True
@@ -61,7 +65,7 @@ class StandInWatch(dict):
 def build_report(spec: dict, builder=None) -> dict:
     builder = builder or load_upstream_builder()
     if builder is None:
-        raise RuntimeError(f"找不到上游 {UPSTREAM_REPORT_MODULE}，无法生成 Fixture")
+        raise RuntimeError(upstream.HOW_TO)
     watches = [StandInWatch(w["uuid"], w["title"], w["url"], w["snapshots"], w.get("error"))
                for w in spec["watches"]]
     return builder.group_changes(watches, spec["from"], spec["to"], mode=spec.get("mode", "net_change"),
@@ -79,8 +83,14 @@ def main(argv=None) -> int:
     check = "--check" in argv
     builder = load_upstream_builder()
     if builder is None:
-        print(f"找不到 {UPSTREAM_REPORT_MODULE}", file=sys.stderr)
+        print(upstream.HOW_TO, file=sys.stderr)
         return 2
+    if upstream.matches_pinned():
+        print(f"上游 changes_report.py 与固定版本一致（changedetection.io {upstream.PINNED_VERSION}，"
+              f"提交 {upstream.PINNED_COMMIT[:10]}）")
+    else:
+        print(f"注意：上游 changes_report.py 与固定版本（{upstream.PINNED_COMMIT[:10]}）不同，"
+              "以下比较针对你提供的版本", file=sys.stderr)
     bad = 0
     for path in fixture_files():
         spec = json.loads(path.read_text(encoding="utf-8"))

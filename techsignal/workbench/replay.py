@@ -1,13 +1,16 @@
-"""Offline replay from the workbench: re-run the REAL pipeline (techsignal.cli) on the API responses
-that were captured during the live run, into a fresh temporary directory.
+"""Offline replay and the optional live connection, for the workbench. Both run the REAL pipeline
+(techsignal.cli) in-process and write into a fresh temporary directory.
 
-Nothing under techsignal/cases is written. Each batch's captured source_changes_report.json is
-replayed together with its run_record.json, so the provenance check (sha256) runs as usual and the
-resulting brief says "离线回放". Multi-batch cases are replayed in order with --track-history.
+Offline replay: the API responses captured during the live run are re-run with their run records
+(provenance check by sha256, so the brief says "离线回放"). Multi-batch cases are replayed in order
+with --track-history. Nothing under the case directories is written.
+
+Concurrency: the API key and the log stream are passed as arguments. No process-wide state (the
+process environment, sys.stdout/sys.stderr) is modified, so several Streamlit sessions served by one
+process cannot see or overwrite each other's key or log.
 """
 from __future__ import annotations
 
-import contextlib
 import io
 import shutil
 import tempfile
@@ -24,6 +27,11 @@ class ReplayResult:
     run_dirs: list[Path]
     log: str                # what the CLI printed, for the "运行日志" expander
     verify: bool
+
+
+def _last_line(buf: io.StringIO, default: str) -> str:
+    lines = buf.getvalue().strip().splitlines()
+    return lines[-1] if lines else default
 
 
 def replay_case(case: CaseRef, verify: bool = False, workdir: Path | None = None) -> ReplayResult:
@@ -44,10 +52,8 @@ def replay_case(case: CaseRef, verify: bool = False, workdir: Path | None = None
             args.append("--track-history")
         if verify and case.verify_policy_path:
             args += ["--verify", "--verify-policy", str(case.verify_policy_path)]
-        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            rc = cli_main(args)
-        if rc != 0:
-            raise LoadError(f"{b.label} 回放失败：{buf.getvalue().strip().splitlines()[-1] if buf.getvalue().strip() else '未知错误'}")
+        if cli_main(args, stream=buf) != 0:
+            raise LoadError(f"{b.label} 回放失败：{_last_line(buf, '未知错误')}")
         snap = workdir / f"batch{b.number}"
         shutil.copytree(state, snap)
         run_dirs.append(snap)
@@ -56,10 +62,8 @@ def replay_case(case: CaseRef, verify: bool = False, workdir: Path | None = None
 
 def fetch_live(case: CaseRef, base_url: str, api_key: str, from_ts: int, workdir: Path | None = None) -> ReplayResult:
     """「在线连接」: pull changes from the user's own changedetection.io via the existing client and run
-    the pipeline (techsignal.cli, live mode) into a temporary directory. The API key is passed via
-    the environment of this call only and is never written anywhere."""
-    import os
-
+    the pipeline (techsignal.cli, live mode) into a temporary directory. The key is passed as an
+    argument only and is never written to any output file."""
     from ..cdio_client import CdioError, ChangeDetectionClient
     if not base_url.startswith(("http://", "https://")):
         raise LoadError("地址必须以 http:// 或 https:// 开头")
@@ -70,18 +74,8 @@ def fetch_live(case: CaseRef, base_url: str, api_key: str, from_ts: int, workdir
     workdir = Path(workdir or tempfile.mkdtemp(prefix="techsignal-live-"))
     out = workdir / "live"
     buf = io.StringIO()
-    old = os.environ.get("TECHSIGNAL_CDIO_API_KEY")
-    os.environ["TECHSIGNAL_CDIO_API_KEY"] = api_key or ""
-    try:
-        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            rc = cli_main(["run", "--cdio-url", base_url, "--from", str(int(from_ts)), "--theses", str(case.theses_path),
-                           "--sources", str(case.sources_path), "--out", str(out)])
-    finally:
-        if old is None:
-            os.environ.pop("TECHSIGNAL_CDIO_API_KEY", None)
-        else:
-            os.environ["TECHSIGNAL_CDIO_API_KEY"] = old
+    rc = cli_main(["run", "--cdio-url", base_url, "--from", str(int(from_ts)), "--theses", str(case.theses_path),
+                   "--sources", str(case.sources_path), "--out", str(out)], api_key=api_key or "", stream=buf)
     if rc != 0:
-        lines = buf.getvalue().strip().splitlines()
-        raise LoadError(lines[-1] if lines else "在线拉取失败")
+        raise LoadError(_last_line(buf, "在线拉取失败"))
     return ReplayResult(workdir, [out], buf.getvalue(), False)

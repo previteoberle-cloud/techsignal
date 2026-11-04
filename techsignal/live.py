@@ -4,7 +4,8 @@
         --case cases/tenstorrent_blackhole/case.json --out cases/tenstorrent_blackhole/output
 
 What is real here:
-  - changedetection.io itself (changedetection.py from this repository, temporary datastore),
+  - changedetection.io itself (changedetection.py from a source checkout located by
+    techsignal.upstream - see scripts/fetch_changedetection.sh - with a temporary datastore),
   - its fetch of every URL in the case (through whatever network the machine has),
   - its snapshot history and diff, read back through the REST API by ChangeDetectionClient.
 
@@ -29,10 +30,8 @@ import tempfile
 import time
 from pathlib import Path
 
+from . import upstream
 from .cdio_client import CdioError, ChangeDetectionClient
-
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-TECHSIGNAL_ROOT = REPO_ROOT / "techsignal"
 
 
 class LiveCdioError(RuntimeError):
@@ -63,9 +62,10 @@ class LiveCdio:
         self.url = ""
 
     def __enter__(self) -> LiveCdio:
-        entry = REPO_ROOT / "changedetection.py"
-        if not entry.exists():
-            raise LiveCdioError(f"找不到 {entry}：需要在 changedetection.io 仓库内运行")
+        source = upstream.cdio_source()
+        if source is None:
+            raise LiveCdioError(upstream.HOW_TO)
+        entry = source / "changedetection.py"
         self.datastore = Path(tempfile.mkdtemp(prefix="techsignal-cdio-"))
         port = _free_port()
         self.url = f"http://127.0.0.1:{port}"
@@ -76,7 +76,7 @@ class LiveCdio:
         log = open(self.log_path, "w") if self.log_path else subprocess.DEVNULL  # noqa: SIM115
         self.proc = subprocess.Popen(
             [self.python, str(entry), "-d", str(self.datastore), "-p", str(port), "-h", "127.0.0.1", "-l", "INFO"],
-            cwd=REPO_ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+            cwd=source, env=env, stdout=log, stderr=subprocess.STDOUT)
         try:
             token = self._wait_for_token()
             self.client = ChangeDetectionClient(self.url, api_key=token, timeout=30)
@@ -173,13 +173,10 @@ def run_case(python: str, case_path: Path, out: Path, log_path: Path | None = No
     base = case_path.parent
     with LiveCdio(python, log_path=log_path) as cdio:
         obs = cdio.observe_versions(case["watch_title"], [v["url"] for v in case["versions"]])
-        os.environ["TECHSIGNAL_CDIO_API_KEY"] = cdio.client.api_key
-        try:
-            rc = cli_main(["run", "--cdio-url", cdio.url, "--from", str(obs["snapshot_timestamps"][0] - 1),
-                           "--uuids", obs["uuid"], "--theses", str(base / case["theses"]),
-                           "--sources", str(base / case["sources"]), "--out", str(out)] + _verify_args(case, base))
-        finally:
-            os.environ.pop("TECHSIGNAL_CDIO_API_KEY", None)
+        rc = cli_main(["run", "--cdio-url", cdio.url, "--from", str(obs["snapshot_timestamps"][0] - 1),
+                       "--uuids", obs["uuid"], "--theses", str(base / case["theses"]),
+                       "--sources", str(base / case["sources"]), "--out", str(out)] + _verify_args(case, base),
+                      api_key=cdio.client.api_key)
         cdio_version = cdio.client.system_info().get("version")
     if rc == 0:
         record = {
@@ -217,23 +214,19 @@ def run_cross_batch_case(python: str, case_path: Path, out: Path, log_path: Path
         uuid = cdio.client.create_watch(urls[0], title=case["watch_title"])
         ts = cdio.wait_for_snapshots(uuid, 1)
         obs = {"uuid": uuid}
-        os.environ["TECHSIGNAL_CDIO_API_KEY"] = cdio.client.api_key
-        try:
-            for n, (a, b) in enumerate(case["batches"], 1):
-                if b != len(ts) or a != b - 1:
-                    raise LiveCdioError("批次必须按顺序比较相邻版本，例如 [[0,1],[1,2]]")
-                ts = cdio.observe_next(uuid, urls[b], b + 1)
-                rc = cli_main(["run", "--cdio-url", cdio.url, "--from", str(ts[a]), "--to", str(ts[b]),
-                               "--uuids", uuid, "--max-lines", "2000", "--track-history",
-                               "--theses", str(base / case["theses"]), "--sources", str(base / case["sources"]),
-                               "--out", str(state)] + _verify_args(case, base))
-                if rc != 0:
-                    return rc
-                snap = out / f"batch{n}"
-                shutil.rmtree(snap, ignore_errors=True)
-                shutil.copytree(state, snap)
-        finally:
-            os.environ.pop("TECHSIGNAL_CDIO_API_KEY", None)
+        for n, (a, b) in enumerate(case["batches"], 1):
+            if b != len(ts) or a != b - 1:
+                raise LiveCdioError("批次必须按顺序比较相邻版本，例如 [[0,1],[1,2]]")
+            ts = cdio.observe_next(uuid, urls[b], b + 1)
+            rc = cli_main(["run", "--cdio-url", cdio.url, "--from", str(ts[a]), "--to", str(ts[b]),
+                           "--uuids", uuid, "--max-lines", "2000", "--track-history",
+                           "--theses", str(base / case["theses"]), "--sources", str(base / case["sources"]),
+                           "--out", str(state)] + _verify_args(case, base), api_key=cdio.client.api_key)
+            if rc != 0:
+                return rc
+            snap = out / f"batch{n}"
+            shutil.rmtree(snap, ignore_errors=True)
+            shutil.copytree(state, snap)
         cdio_version = cdio.client.system_info().get("version")
     record = {
         "case_id": case["case_id"],

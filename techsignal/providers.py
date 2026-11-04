@@ -4,7 +4,8 @@ Implemented providers:
   - MockReplayProvider: replays hand-written judgements from a JSON file. Used by every test and the
     demo. Its output is labelled Basis.MOCK_MODEL everywhere and is NOT model reasoning.
   - OpenAICompatibleProvider: POSTs to an OpenAI-compatible /chat/completions endpoint (OpenAI,
-    DeepSeek, Qwen, Ollama, vLLM...). R1 tests it only against an injected fake transport; it has
+    DeepSeek, Qwen, Ollama, vLLM...). It is tested against an injected fake transport and a local
+    protocol stub only; it has
     NOT been run against a real model service.
 
 The pipeline validates every provider output (see assess.py) - a provider can't cite evidence that

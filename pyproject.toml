@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "techsignal"
-version = "0.1.0"
-description = "Research-thesis impact assessment on top of changedetection.io change data (R1 research prototype)"
+version = "0.5.0"
+description = "Research-thesis impact assessment for hard-tech companies, on top of changedetection.io change data: rules, evidence ledger, bounded evidence gathering, Chinese research workbench"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }

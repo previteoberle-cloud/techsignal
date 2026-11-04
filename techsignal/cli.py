@@ -76,14 +76,16 @@ def _commit_outputs(out: Path, files: dict[str, str]) -> None:
 
 def _fetch_live(args) -> tuple[dict, dict]:
     """Pull a ChangesReport from a running changedetection.io. The API key comes from the
-    TECHSIGNAL_CDIO_API_KEY environment variable only and is never written anywhere."""
+    caller (main(..., api_key=...), used by the workbench and the live harness) or, on the command
+    line, from the TECHSIGNAL_CDIO_API_KEY environment variable. It is never written anywhere."""
     import datetime as _dt
     import hashlib
 
     from . import __version__
     from .cdio_client import ChangeDetectionClient
 
-    client = ChangeDetectionClient(args.cdio_url, api_key=os.getenv("TECHSIGNAL_CDIO_API_KEY") or None,
+    key = args.api_key if getattr(args, "api_key", None) is not None else os.getenv("TECHSIGNAL_CDIO_API_KEY")
+    client = ChangeDetectionClient(args.cdio_url, api_key=key or None,
                                    timeout=args.timeout)
     info = client.system_info()
     params = {"from": args.from_ts, "to": args.to_ts, "tag": args.tag,
@@ -175,22 +177,25 @@ def cmd_run(args) -> int:
             files["run_record.json"] = canonical_json(record) + "\n"
         _commit_outputs(out, files)
     except Exception as e:  # noqa: BLE001 - CLI boundary: report, exit non-zero, outputs untouched
-        print(f"失败（{type(e).__name__}）：{e}；已有输出未改动", file=sys.stderr)
+        print(f"失败（{type(e).__name__}）：{e}；已有输出未改动", file=args.stream or sys.stderr)
         return 2
+
+    def say(*parts):
+        print(*parts, file=args.stream or sys.stdout)
 
     s = result.brief.stats
     if record is not None:
-        print(f"在线拉取：{record['cdio_base_url']}（changedetection.io {record['cdio_version']}），"
+        say(f"在线拉取：{record['cdio_base_url']}（changedetection.io {record['cdio_version']}），"
               f"{record['http_requests']} 次请求，{record['watches_in_report']} 个变化监测项")
-    print(f"变化事件 {s['events_total']}，过滤 {s['events_filtered']}，评估 {s['assessments']}"
+    say(f"变化事件 {s['events_total']}，过滤 {s['events_filtered']}，评估 {s['assessments']}"
           f"（支持 {s['supports']} / 削弱 {s['weakens']} / 证据不足 {s['insufficient']} / 无关 {s['unrelated']}）")
-    print(f"模型层调用 {result.stats.provider_calls} 次（Provider：{result.provider_name or '未配置'}），"
+    say(f"模型层调用 {result.stats.provider_calls} 次（Provider：{result.provider_name or '未配置'}），"
           f"拒绝 {result.stats.provider_rejections}，失败 {result.stats.provider_failures}")
     if result.verify_run is not None:
         vr = result.verify_run
-        print(f"补证：{len(vr.summaries)} 项触发，{sum(c.status != 'skipped_duplicate' for c in vr.calls)} 次工具调用，"
+        say(f"补证：{len(vr.summaries)} 项触发，{sum(c.status != 'skipped_duplicate' for c in vr.calls)} 次工具调用，"
               f"新增证据 {len(vr.new_evidence)} 条；" + "；".join(f"{v.assessment_id}→{v.outcome}" for v in vr.summaries))
-    print(f"引用完整性校验：通过；输出目录 {out}")
+    say(f"引用完整性校验：通过；输出目录 {out}")
     return 0
 
 
@@ -220,7 +225,11 @@ def cmd_eval(args) -> int:
     return 0 if report["summary"]["scenarios_failed"] == 0 else 1
 
 
-def main(argv=None) -> int:
+def main(argv=None, api_key: str | None = None, stream=None) -> int:
+    """api_key: passed explicitly by in-process callers (workbench, live harness) so that no shared
+    process environment is touched; the command line uses TECHSIGNAL_CDIO_API_KEY instead.
+    stream: where messages go (default: stdout/stderr) - lets the workbench capture one run's log
+    without redirecting sys.stdout for the whole process."""
     p = argparse.ArgumentParser(prog="techsignal")
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -259,6 +268,8 @@ def main(argv=None) -> int:
     e.set_defaults(func=cmd_eval)
 
     args = p.parse_args(argv)
+    args.api_key = api_key
+    args.stream = stream
     return args.func(args)
 
 
