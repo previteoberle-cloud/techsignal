@@ -155,6 +155,8 @@ def _overview(store: P.ProjectStore, p: P.Project) -> None:
     if s.keywords:
         st.caption("主题词：" + "、".join(s.keywords))
     st.caption(MATCH_NOTE)
+    for w in P.spec_warnings(s):
+        st.warning(w)
     st.markdown("#### 监测结果")
     _results_summary(store, p)
 

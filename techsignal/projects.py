@@ -316,6 +316,16 @@ def check_spec(spec: ProjectSpec, ready: bool, allow_private: bool = False) -> P
                        sources=sources, keywords=keywords, owner=owner)
 
 
+def spec_warnings(spec: ProjectSpec) -> list[str]:
+    """Non-blocking advice. Names are matched as plain substrings (rules.match_theses), so a short
+    Latin alias also fires inside longer words and other companies' names (see eval case E09)."""
+    out = []
+    for a in [spec.name, *spec.aliases]:
+        if a and a.isascii() and len(a.replace(" ", "")) <= 3:
+            out.append(f"名称或别名「{a}」很短，会按字面出现在其他单词或公司名中（例如「{a}Tech」），容易误判为同一研究对象")
+    return out
+
+
 def spec_from_form(name: str = "", aliases: str = "", question: str = "", judgement: str = "",
                    assumptions: list[dict] | None = None, urls: str = "", source_types: dict | None = None,
                    keywords: str = "", owner: str = "") -> ProjectSpec:
@@ -367,7 +377,18 @@ def build_thesis(project: Project) -> Thesis:
                                 support_patterns=[literal_pattern(p) for p in a.support_signals],
                                 weaken_patterns=[literal_pattern(p) for p in a.weaken_signals])
                      for i, a in enumerate(s.assumptions, 1)],
-        status="active", as_of=project.updated_at[:10], owner=s.owner, fictional=False, sources=[])
+        status="active", as_of=project.updated_at[:10], owner=s.owner, fictional=not all_public(s), sources=[])
+
+
+def all_public(spec: ProjectSpec) -> bool:
+    """True when every watched URL is a public address. A project watching local/private test pages
+    (development opt-in) is marked as test data, so its results never claim to be public material."""
+    try:
+        for src in spec.sources:
+            check_public_url(src.url)
+    except ProjectError:
+        return False
+    return True
 
 
 def build_sources(project: Project) -> list[SourceProfile]:

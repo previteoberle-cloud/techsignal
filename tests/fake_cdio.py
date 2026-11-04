@@ -20,12 +20,15 @@ from urllib.parse import parse_qs, urlsplit
 
 
 class FakeCdio:
-    def __init__(self, key: str = "test-key", auto_check: bool = True):
+    def __init__(self, key: str = "test-key", auto_check: bool = True, async_delay: float = 0.0):
         self.key = key
         self.pages: dict[str, str | None] = {}        # url -> text (None = fetch error)
         self.watches: dict[str, dict] = {}
         self.snapshots: dict[str, dict[int, str]] = {}
         self.auto_check = auto_check                  # False: recheck never completes
+        # > 0: like the real worker, last_checked is set when the check STARTS and the snapshot and
+        # check_count follow `async_delay` seconds later (changedetectionio/worker.py)
+        self.async_delay = async_delay
         self.requests: list[tuple[str, str]] = []
         self.keys_seen: list[str | None] = []
         self._clock = 0
@@ -71,7 +74,11 @@ class FakeCdio:
                             return self._send(404, {"message": "no such watch"})
                         if len(parts) == 4:
                             if q.get("recheck") and outer.auto_check:
-                                outer.fetch(wid)
+                                if outer.async_delay:
+                                    outer.watches[wid]["last_checked"] = outer._now()
+                                    threading.Timer(outer.async_delay, outer.fetch_locked, args=(wid,)).start()
+                                else:
+                                    outer.fetch(wid)
                             return self._send(200, dict(outer.watches[wid]))
                         if parts[4] == "history" and len(parts) == 5:
                             return self._send(200, {str(k): f"/snap/{k}" for k in outer.snapshots[wid]})
@@ -98,7 +105,7 @@ class FakeCdio:
 
     def add_watch(self, url: str, title: str = "") -> str:
         wid = str(uuidlib.uuid4())
-        self.watches[wid] = {"uuid": wid, "url": url, "title": title, "last_checked": 0, "last_changed": 0,
+        self.watches[wid] = {"uuid": wid, "url": url, "title": title, "last_checked": 0, "last_changed": 0, "check_count": 0,
                              "last_error": False}
         self.snapshots[wid] = {}
         return wid
@@ -107,10 +114,15 @@ class FakeCdio:
         self._clock = max(int(time.time()), self._clock + 1)
         return self._clock
 
+    def fetch_locked(self, wid: str) -> None:
+        with self._lock:
+            self.fetch(wid)
+
     def fetch(self, wid: str) -> None:
         w = self.watches[wid]
         ts = self._now()
         w["last_checked"] = ts
+        w["check_count"] = w.get("check_count", 0) + 1
         text = self.pages.get(w["url"])
         if text is None:
             w["last_error"] = "fetch failed (fake)"

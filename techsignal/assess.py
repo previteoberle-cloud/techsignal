@@ -177,6 +177,8 @@ def _from_model_multi(event, t, evidence, match, outcome, provider, stats) -> li
         stats.provider_failures += 1
         return [conservative("model_failed", f"模型层调用失败或输出格式错误（{e}），按证据不足处理")]
 
+    from .verify.tools import looks_like_injection
+    injected = any(looks_like_injection(x) for x in added + removed)
     valid = {a.assumption_id for a in thesis.assumptions}
     allowed = set(req.evidence_ids)
     accepted, rejected = [], []
@@ -222,7 +224,9 @@ def _from_model_multi(event, t, evidence, match, outcome, provider, stats) -> li
         if direction in (Direction.SUPPORTS, Direction.WEAKENS):
             own = [s for s in outcome.signals if s.assumption_id == v.assumption_id]
             why = None
-            if v.change_kind != "new_fact":
+            if injected:
+                why = "提示注入核对：变化内容中含有疑似针对模型的指令，模型建议不据此定向"
+            elif v.change_kind != "new_fact":
                 why = f"变化类型门槛：模型判断这是「{kind}」，不是新出现的事实，系统不据此定向"
             elif not t.meaningful_added:
                 why = "差异核对：模型称为新事实，但本次变化没有新增内容（只有删除），与差异不符"

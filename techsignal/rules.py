@@ -37,7 +37,17 @@ class SignalHit:
         side = "新增" if self.side == "added" else "删除"
         pol = "支持" if self.polarity == "support" else "削弱"
         neg = "（前有否定词）" if self.negated else ""
-        return f"{self.assumption_id}·{pol}信号「{self.pattern}」出现在{side}内容{neg}：{self.line}"
+        return f"{self.assumption_id}·{pol}信号「{display_pattern(self.pattern)}」出现在{side}内容{neg}：{self.line}"
+
+
+_LITERAL = re.compile(r"^\(\?i\)(?:\(\?<!\[A-Za-z0-9\]\))?(.*?)(?:\(\?!\[A-Za-z0-9\]\))?$", re.S)
+
+
+def display_pattern(pattern: str) -> str:
+    """A phrase typed in the workbench is stored as a literal pattern (projects.literal_pattern);
+    show the phrase, not the regex. Hand-written patterns (R1-R5 cases) are shown unchanged."""
+    m = _LITERAL.match(pattern)
+    return re.sub(r"\\(.)", r"\1", m.group(1)) if m else pattern
 
 
 @dataclass

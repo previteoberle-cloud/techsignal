@@ -332,3 +332,20 @@ def test_project_check_with_a_configured_model_service(cdio, store, monkeypatch)
     finally:
         httpd.shutdown()
         httpd.server_close()
+
+
+def test_waits_for_the_snapshot_not_for_the_start_of_the_check(store):
+    """Counterexample from the R6 browser acceptance against changedetection.io 0.60.10: last_checked
+    moves when a check starts, the snapshot is saved later. Waiting on last_checked reported "no new
+    snapshot" for a real change."""
+    cdio = FakeCdio(key=KEY, async_delay=1.5)
+    cdio.pages[PAGE] = V1
+    cdio.pages[NEWS] = "AI news\n"
+    try:
+        p, c = _linked(store, cdio, urls=f"{PAGE} 官方仓库")
+        M.check_now(store, p.project_id, c, wait=10)
+        cdio.pages[PAGE] = V2
+        r = M.check_now(store, p.project_id, c, wait=10)
+        assert r.outcome == "assessed", r.message
+    finally:
+        cdio.close()

@@ -337,3 +337,18 @@ def test_project_file_is_plain_json_without_secrets(store):
     data = json.loads((store.project_dir(p.project_id) / "project.json").read_text(encoding="utf-8"))
     assert data["schema"] == P.SCHEMA and set(data) == {"schema", "project_id", "status", "version", "created_at",
                                                          "updated_at", "spec"}
+
+
+def test_phrases_are_displayed_as_typed_not_as_regex():
+    from techsignal.rules import display_pattern
+    for phrase in ("推迟", "Llama 3.1 70B", "a.b(c", "70B"):
+        assert display_pattern(P.literal_pattern(phrase)) == phrase
+    assert display_pattern(r"量产(延期|推迟)") == r"量产(延期|推迟)"       # hand-written patterns unchanged
+
+
+def test_projects_on_local_test_pages_are_not_labelled_public(tmp_path):
+    s = P.ProjectStore(tmp_path / "p", allow_private_urls=True)
+    local = s.create(_spec(urls="http://127.0.0.1:8000/news 测试页"), ready=True)
+    public = s.create(_spec(name="Cerebras"), ready=True)
+    assert load_theses(s.theses_path(local.project_id))[0].fictional is True
+    assert load_theses(s.theses_path(public.project_id))[0].fictional is False

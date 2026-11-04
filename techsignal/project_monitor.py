@@ -265,14 +265,21 @@ def _snapshot_keys(client: ChangeDetectionClient, uuid: str) -> list[int]:
         return []
 
 
+def _check_finished(before: dict, now: dict) -> bool:
+    """changedetection.io sets last_checked when a check STARTS (worker.py, fetch_start_time) and
+    increments check_count only after the snapshot was saved. So a finished check is a higher
+    check_count; last_checked is only used when the server does not report check_count."""
+    if isinstance(before.get("check_count"), int) and isinstance(now.get("check_count"), int):
+        return now["check_count"] > before["check_count"]
+    return (now.get("last_checked") or 0) > (before.get("last_checked") or 0)
+
+
 def _wait_for_check(client: ChangeDetectionClient, uuid: str, before: dict, deadline: float,
                     sleep: Callable[[float], None]) -> dict:
-    """Poll the watch until changedetection.io has finished the requested check (last_checked moved)."""
+    """Poll the watch until changedetection.io has finished the requested check."""
     while True:
         w = client.get_watch(uuid)
-        if (w.get("last_checked") or 0) > (before.get("last_checked") or 0):
-            return w
-        if time.monotonic() > deadline:
+        if _check_finished(before, w) or time.monotonic() > deadline:
             return w
         sleep(1.0)
 
@@ -322,7 +329,7 @@ def check_now(store: P.ProjectStore, project_id: str, client: ChangeDetectionCli
             return finish("failed", f"与 changedetection.io 通信失败：{e}")
         rec["new_snapshots"] = {u: len(set(keys_after[u]) - set(keys_before[u])) for u in uuids}
         rec["watch_errors"] = {u: str(after[u].get("last_error")) for u in uuids if after[u].get("last_error")}
-        not_done = [u for u in uuids if (after[u].get("last_checked") or 0) <= (before[u].get("last_checked") or 0)]
+        not_done = [u for u in uuids if not _check_finished(before[u], after[u])]
         cursor = state.cursor if state.cursor is not None else 0
         latest = max([k for ks in keys_after.values() for k in ks] or [cursor])
         note = ""

@@ -61,6 +61,7 @@ def test_new_project_to_real_assessment(tmp_path):
     assert any("推迟" in x for x in ev.excerpt_added) and ev.grade == "A"
     rec = json.loads((d / "run_record.json").read_text(encoding="utf-8"))
     assert rec["input_mode"] == "live_api" and rec["cdio_version"] == version
+    assert run.provenance["data_nature"] == "fictional"        # a local test page is not public material
     assert {f: f.read_bytes() for f in store.project_dir(p.project_id).glob("*.json") if f in project_files} \
         == project_files
     print("R6 E2E:", second.message, rows, ev.evidence_id, version)
