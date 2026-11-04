@@ -20,6 +20,7 @@ def _text(at):
 def root(tmp_path, monkeypatch):
     r = tmp_path / "projects"
     monkeypatch.setenv(P.PROJECTS_ENV, str(r))
+    monkeypatch.setenv("TECHSIGNAL_COLLECTOR_ROOT", str(tmp_path / "collector"))   # home page, kept out of ~
     return r
 
 
@@ -41,9 +42,12 @@ def _fill(at, prefix="new", name="Tenstorrent", urls="https://github.com/tenstor
     return at.run()
 
 
-def test_default_workspace_is_still_the_demo_case(root):
+def test_home_is_the_collector_and_the_demo_case_is_one_click_away(root, tmp_path, monkeypatch):
+    monkeypatch.setenv("TECHSIGNAL_COLLECTOR_ROOT", str(tmp_path / "collector"))
     at = AppTest.from_file(APP, default_timeout=120).run()
-    assert at.radio(key="workspace").value == "示例案例" and at.selectbox(key="case").value == "tenstorrent-blackhole-70b"
+    assert at.radio(key="workspace").value == "信息采集" and "新建采集任务" in _text(at)
+    at.radio(key="workspace").set_value("示例案例").run()
+    assert at.selectbox(key="case").value == "tenstorrent-blackhole-70b"
 
 
 def test_empty_workspace_opens_the_new_project_form(root):

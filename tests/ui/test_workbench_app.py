@@ -15,7 +15,9 @@ PAGES = ["总览", "管理层速览", "研究判断", "变化时间线", "补证
 
 
 def _app(**env):
+    """The demo case now lives under 「高级研究·示例案例」; the home page is the collector."""
     at = AppTest.from_file(APP, default_timeout=120)
+    at.session_state["workspace"] = "示例案例"
     return at
 
 
