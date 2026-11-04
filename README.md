@@ -2,7 +2,7 @@
 
 TechSignal 读取 [changedetection.io](https://github.com/dgtlmoon/changedetection.io) 输出的网页变化数据，判断这些变化对**既有研究判断**的影响，并生成带证据编号、可校验的中文管理层速览。
 
-> **状态说明（R3）：** 已真实运行的部分：规则层、证据台账、简报与引用校验、changedetection.io API Client、跨批次历史、**有界补证**（确定性策略触发，在白名单内真实调用 changedetection.io 快照、GitHub 文件和 GitHub 提交元数据）。已对真实运行的 changedetection.io 实例和真实公开来源（Tenstorrent 官方 GitHub 仓库）在线验证。**还没有任何真实大模型参与**：补证决策和研判全部是确定性规则；模型层只有 Mock 回放和本地协议桩测试。也**不是持续自动监控**：目前按需运行，真实案例是对历史版本的回放观测。详见 [docs/R3_ACCEPTANCE.md](docs/R3_ACCEPTANCE.md)。
+> **状态说明（R4）：** 已真实运行的部分：规则研判、证据台账、中文简报与引用校验、changedetection.io API Client、跨批次历史、**有界补证**（确定性策略，真实调用 changedetection.io 和 GitHub）、**全中文研究工作台**（浏览器界面，可离线打开真实案例）。已对真实运行的 changedetection.io 实例和真实公开来源（Tenstorrent 官方 GitHub 仓库）在线验证。**还没有任何真实大模型参与**：所有判断都由确定性规则作出；也**不是持续自动监控**，目前是按需运行和历史版本回放。详见 [docs/R4_ACCEPTANCE.md](docs/R4_ACCEPTANCE.md)。
 
 ## 与 changedetection.io 的分工
 
@@ -13,6 +13,36 @@ TechSignal 读取 [changedetection.io](https://github.com/dgtlmoon/changedetecti
 | 状态 | 每个监测项独立 | 研究判断库（只读）+ 证据台账（JSONL） |
 
 上游已有的 AI 能力（`llm_intent` 过滤、AI 变化摘要、MCP Server）属于上游，不算本模块的贡献。本模块不修改 `changedetectionio/` 下的任何文件。
+
+## 研究工作台（R4）
+
+```bash
+cd techsignal
+pip install -e ".[ui]"
+python -m techsignal.workbench          # 浏览器打开 http://localhost:8501
+```
+
+全中文的浏览器界面，共六个页面：总览、管理层速览、研究判断、变化时间线、补证过程、证据详情。默认展示真实的 Tenstorrent 历史案例，不需要网络、Docker 或模型密钥。
+
+- **历史实测演示：** 只读展示已保存的在线实测结果。
+- **离线回放：** 用保存的原始数据重新运行研判流水线，结果写入临时目录，不覆盖已保存的案例。
+- **在线连接：** 连接你自己的 changedetection.io，拉取变化并研判。
+
+可以点击证据编号跳转到该证据的详情，可以展开完整补证轨迹，可以下载中文速览。
+
+| 总览 | 变化时间线 | 补证过程 |
+|---|---|---|
+| ![总览](docs/screenshots/r4_02_cross_batch_overview.png) | ![时间线](docs/screenshots/r4_04_timeline.png) | ![补证](docs/screenshots/r4_07_verification_full.png) |
+
+## 能力演进（R1–R4）
+
+| 轮次 | 新增的真实能力 | 仍是模拟或尚未实现 |
+|---|---|---|
+| R1 | 规则研判、证据台账、中文简报、引用校验、虚构场景测试 | 模型层仅有 Mock |
+| R1.1 | 修复跨企业去重、失败保护、多假设归因 | — |
+| R2 | changedetection.io API Client、真实实例在线验证、真实公开案例、跨批次历史 | 模型层仅有协议测试 |
+| R3 | 来源声明按运行元数据生成；有界补证（真实工具、白名单、执行轨迹） | 补证决策没有使用模型 |
+| R4 | 全中文研究工作台（离线可用、可交互、可回放）；修复多批次证据来源地址；简报补证记录中文化 | 持续监控、模型推理、新建判断的界面 |
 
 ## 处理流程
 
@@ -150,7 +180,7 @@ Markdown 层还会检查：所有 `[EV-…]`、`[TH-…]` 都能追溯到证据�
 
 ## 测试
 
-离线测试共 185 个，另有 4 个需显式开启的在线测试（`tests/integration/`，需要真实的 changedetection.io 和 GitHub 访问）。离线测试包括 23 个虚构场景（S21–S23 和 `test_r11_*.py` 为 R1.1 反例回归），以及 R2 新增的 API Client、真实案例回放、模型协议、跨批次测试。场景覆盖：有效变化、支持、削弱、两类无关、两类噪声、两类重复、来源冲突、低等级证据、无信号、Mock 判定、模型错误引用、模型缺失、否定语境、无净差异、截断加报错，以及三类异常输入。各场景的结果见 [docs/R1_ACCEPTANCE.md](docs/R1_ACCEPTANCE.md)。
+离线测试共 216 个（其中 31 个为工作台测试，界面脚本测试需要安装 `.[ui]`），另有 4 个需显式开启的在线测试（`tests/integration/`，需要真实的 changedetection.io 和 GitHub 访问）。离线测试包括 23 个虚构场景（S21–S23 和 `test_r11_*.py` 为 R1.1 反例回归），以及 R2 新增的 API Client、真实案例回放、模型协议、跨批次测试。场景覆盖：有效变化、支持、削弱、两类无关、两类噪声、两类重复、来源冲突、低等级证据、无信号、Mock 判定、模型错误引用、模型缺失、否定语境、无净差异、截断加报错，以及三类异常输入。各场景的结果见 [docs/R1_ACCEPTANCE.md](docs/R1_ACCEPTANCE.md)。
 
 评测指标只说明代码行为与人工标注的预期一致。场景和预期都由开发者编写，**不代表真实世界的准确率**。
 

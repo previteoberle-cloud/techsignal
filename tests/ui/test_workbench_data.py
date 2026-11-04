@@ -90,6 +90,8 @@ def test_verification_view():
     assert [s["status"] for s in v["steps"]] == ["成功", "失败", "成功"]
     assert v["evidence"] and all(e in b2.evidence for e in v["evidence"])
     assert vm.load_batches(c)[0].verification() == []
+    for eid in v["evidence"]:  # evidence fetched by verification says what it was used for
+        assert any(u.startswith("补证结论：") for u in b2.evidence_view(eid)["used_by"])
 
 
 def test_no_internal_values_leak_into_view_models():

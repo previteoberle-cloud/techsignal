@@ -195,6 +195,7 @@ class RunView:
                     pending.append(q)
         return {
             "subjects": [t.title for t in self.theses],
+            "companies": list(dict.fromkeys(t.entities[0] for t in self.theses if t.entities)),
             "changes": s.get("events_total", 0),
             "filtered": s.get("events_filtered", 0),
             "judgements": [self.judgement_row(a) for a in relevant],
@@ -244,6 +245,10 @@ class RunView:
             if evidence_id in a.get("evidence_ids", []) or evidence_id in a.get("conflicting_evidence_ids", []):
                 role = "冲突证据" if evidence_id in a.get("conflicting_evidence_ids", []) else "依据"
                 used.append(f"{self.judgement_row(a)['assumption']}：{L.zh(L.DIRECTION, a['direction'])}（作为{role}）")
+        for summ in (self.trace or {}).get("summaries", []):
+            if evidence_id in summ.get("evidence_ids", []):
+                used.append(f"补证结论：{L.zh(L.OUTCOME, summ.get('outcome'))}"
+                            f"（对象：{self.assumption_text(summ.get('thesis_id'), summ.get('assumption_id'))}）")
         via_tool = ev.obtained_via == "verification_tool"
         return {
             "id": ev.evidence_id,

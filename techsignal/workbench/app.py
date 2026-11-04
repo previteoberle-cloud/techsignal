@@ -48,7 +48,8 @@ def evidence_buttons(ids: list[str], key: str) -> None:
     ids = list(dict.fromkeys(i for i in ids if i))
     if not ids:
         return
-    cols = st.columns(min(len(ids), 4) + 1)
+    k = min(len(ids), 4)
+    cols = st.columns([0.7] + [1.6] * k + [max(0.5, 9 - 1.6 * k)], vertical_alignment="center")
     cols[0].markdown('<span class="ts-muted">证据：</span>', unsafe_allow_html=True)
     for i, ev in enumerate(ids[:4]):
         cols[i + 1].button(ev, key=f"{key}-{ev}", on_click=_goto_evidence, args=(ev,), help="查看这条证据的来源与原文")
@@ -174,7 +175,7 @@ st.divider()
 def page_overview():
     o = run.overview()
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("研究对象", "、".join(o["subjects"]) or "—")
+    c1.metric("研究对象", "、".join(o["companies"]) or "—", help="；".join(o["subjects"]))
     c2.metric("本批次变化", f"{o['changes']} 条", help=f"其中 {o['filtered']} 条被判定为噪声或重复")
     states = sorted({j["state_short"] for j in o["judgements"]})
     c3.metric("当前判断", "、".join(states) or "无相关变化")
@@ -223,7 +224,7 @@ def page_brief():
             v = next((x for x in item.verification if x.text.startswith("补证结论")), None)
             if v:
                 st.markdown(v.text)
-            evidence_buttons([e for s in item.evidence_grade for e in s.evidence_ids], key=f"br{n}")
+            evidence_buttons([e for s in item.evidence_grade + item.verification for e in s.evidence_ids], key=f"br{n}")
     if not run.brief.items:
         st.caption("本批次没有需要关注的变化。")
     st.download_button("下载中文速览（Markdown）", data=run.markdown.encode("utf-8"),
