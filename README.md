@@ -2,7 +2,7 @@
 
 **用证据跟踪硬科技公司的公开信息变化，判断它对既有研究结论的影响。**
 
-> *English summary* — TechSignal turns raw web-page changes captured by [changedetection.io](https://github.com/dgtlmoon/changedetection.io) into cited, reviewable research judgements: does a new change **support**, **weaken** or **not affect** an existing investment thesis, or is the evidence **insufficient**? It keeps an evidence ledger, tracks judgements across batches, runs a bounded, deterministic evidence-gathering step with real tools (allow-listed, budgeted, fully traced), and ships a Chinese browser workbench. It does **not** use any LLM today, and it is a research prototype, not a production service.
+> *English summary* — TechSignal turns raw web-page changes captured by [changedetection.io](https://github.com/dgtlmoon/changedetection.io) into cited, reviewable research judgements: does a new change **support**, **weaken** or **not affect** an existing investment thesis, or is the evidence **insufficient**? It keeps an evidence ledger, tracks judgements across batches, runs a bounded, deterministic evidence-gathering step with real tools (allow-listed, budgeted, fully traced), and ships a Chinese browser workbench where a non-programmer can create a research project from plain text and run one monitored check against their own changedetection.io. An optional OpenAI-compatible model layer gives per-assumption suggestions that are validated and gated by the rules; **no real model has been called in this project** (no authorised service), and it is a research prototype, not a production service.
 
 ![工作台：跨批次总览](docs/screenshots/r4_02_cross_batch_overview.png)
 
@@ -39,7 +39,9 @@
 | `store.py`、`pipeline.py` | 证据台账（JSONL，校验通过后才写盘）；跨批次研判历史 |
 | `brief.py`、`validate.py`、`provenance.py` | 中文速览；引用完整性校验（事实没有来源就报错）；来源声明按运行元数据生成 |
 | `verify/` | **有界补证**：确定性触发与规划；白名单（每次重定向都重新检查）；每项最多 3 次调用；超时、重试、去重；工具输出只当作数据；完整执行轨迹 |
-| `providers.py` | 模型层接口（目前只有 Mock 回放和协议测试，**没有接入真实模型**） |
+| `providers.py` | 模型层：OpenAI 兼容接口，R6 起支持「一次调用、逐条假设给建议」，带变化类型、调用上限、输入长度上限、超时和用量记录。只用 Mock 和本地协议桩测试过，**没有调用过真实模型** |
+| `projects.py`、`project_monitor.py` | R6：浏览器里用文字新建研究项目（版本记录、冲突保护、与示例案例隔离）；连接用户自己的 changedetection.io，确认后建立监测，手动检查一次并研判 |
+| `eval_r6.py`、`eval/` | R6：独立评测集，人工标注 / 规则层 / 协议桩 / 真实模型分列 |
 | `workbench/` | 全中文 Streamlit 研究工作台 |
 | `live.py`、`fixtures.py` | 开发工具：启动真实 changedetection.io 做端到端验证；用上游的报告生成器制作测试数据 |
 
@@ -90,6 +92,21 @@ python -m techsignal.workbench
 3. 在「管理层速览」下载中文速览；
 4. 把「数据来源」切到「离线回放」，用保存的数据重新运行一次研判。
 
+### 新建你自己的研究（R6）
+
+侧栏「工作区」切到「我的研究项目」：
+
+1. 填写研究对象、研究问题、当前判断、关键假设（可写支持 / 削弱信号词）和要监测的公开网址，点「创建研究项目」。也可以先保存草稿。不需要写 JSON、代码或正则；信号词按字面匹配，不是语义理解。
+2. 「监测与评估」：填写你自己运行的 changedetection.io 地址和 API key → 连接 → 勾选确认后建立监测 → 「立即检查一次并研判」。第一次抓取只建立基线；没有新快照或没有实质差异时只记录「本次没有新的变化」，不会生成研判。
+3. 「研判结果」：每条判断写明判断来源、发生了什么、为什么、引用的证据、通过了哪些检查、还有什么没解决。
+4. 「研究设定」修改判断会生成新版本，「修改记录」保留全部旧版本；后台检查永远不会改写你的判断。
+
+项目默认保存在 `~/.techsignal/projects`（环境变量 `TECHSIGNAL_PROJECTS_ROOT` 可改），不会写进仓库里的示例案例。没有 changedetection.io 时，工作台照常打开，并明确提示需要这个外部服务。
+
+![新建项目后的研判结果](docs/screenshots/r6_07_result_explained.png)
+
+可选的模型层（运营方配置，不在页面里填密钥）：`TECHSIGNAL_LLM_BASE_URL`、`TECHSIGNAL_LLM_MODEL`、`TECHSIGNAL_LLM_API_KEY`，以及 `TECHSIGNAL_LLM_MAX_CALLS`（默认 20）、`TECHSIGNAL_LLM_MAX_INPUT_CHARS`（默认 6000）、`TECHSIGNAL_LLM_TIMEOUT`（默认 30 秒）。规则仍然先判断，只有规则无法判定的变化才交给模型；模型建议要通过结构、引用、变化类型、证据等级和提示注入检查，失败就按「证据不足」处理。
+
 命令行演示（虚构数据，Mock 回放模型层）：
 
 ```bash
@@ -123,10 +140,11 @@ python -m techsignal run --cdio-url http://localhost:5000 --from 1790812800 --th
 |---|---|
 | 离线测试 | 见 [docs/R5_ACCEPTANCE.md](docs/R5_ACCEPTANCE.md) 中干净克隆下的实测数字；不需要网络、模型或 changedetection.io |
 | 虚构场景评测 | 23/23 场景通过（`python -m techsignal eval`）。场景和预期都由开发者编写，只说明行为符合设计，**不代表真实准确率** |
+| R6 评测集 | 15 个虚构案例、18 个「案例 × 假设」人工标注，见 [docs/R6_EVAL.md](docs/R6_EVAL.md)。规则层：9 个一致、7 个保守交人工、**2 个方向错误**（远距离否定、过短别名命中另一家公司）。协议桩一列只检验校验与降级逻辑，**不代表模型能力**；真实模型一列为 BLOCKED |
 | 变异检验 | 故意关闭等级闸门、冲突处理、去重主体、台账写盘顺序、多假设归因等保护，对应测试都会失败（见各轮验收记录） |
 | 在线集成 | 4 个测试：真实 changedetection.io（固定上游版本）加真实 GitHub 来源，包括真实补证 |
-| 浏览器验收 | 用 Chromium 实测六个页面：无横向溢出、证据跳转、轨迹展开、下载、离线回放都正常；截图见 `docs/screenshots/` |
-| CI | `test`（3.11 / 3.13）、`ui`（工作台测试 + 真实启动）、`upstream-contract`（与固定上游版本的报告生成器比对）、`live-cdio`（可选的在线集成） |
+| 浏览器验收 | R4：六个页面；R6：在真实 changedetection.io 上走完「新建项目 → 确认建立监测 → 基线 → 页面变化 → 研判 → 修改判断 → 版本记录」，含手机宽度。截图见 `docs/screenshots/` |
+| CI | `test`（3.11 / 3.13，含 R6 评测）、`ui`（工作台测试 + 真实启动）、`upstream-contract`（与固定上游版本的报告生成器比对）、`live-cdio`（在线集成，含 R6 新项目端到端）、`r6-browser`（真实 Chromium + 真实 changedetection.io 的新项目流程） |
 
 ## 8. 关键设计决策
 
@@ -139,10 +157,11 @@ python -m techsignal run --cdio-url http://localhost:5000 --from 1790812800 --th
 
 ## 9. 尚未实现与限制
 
-- **没有真实大模型推理：** 所有研判与补证决策都是确定性规则；没有获得授权的模型服务。
-- **没有持续后台监控：** 没有调度和通知，按需运行；真实案例是对历史版本的观测回放。
-- **只有一个真实研究案例**，没有标注数据集，不能代表通用准确率。
-- **研究判断、信号规则和补证白名单需要手写 JSON**，正则规则对写法敏感（案例中 README 改版后规则就失效了）。
+- **没有调用过真实大模型：** 模型层的接口、校验和降级已实现，但只用 Mock 和本地协议桩测试；没有获得授权的模型服务，因此没有任何模型准确率数字。
+- **没有持续后台监控：** 没有调度和通知，只能手动「检查一次」（R7）；真实案例是对历史版本的观测回放。
+- **只有一个真实研究案例**；R6 评测集是 15 个虚构案例，标注由本项目编写，不能代表通用准确率。
+- **规则层的已知错误：** 否定词离信号词较远时会判错方向；名称按字面子串匹配，过短的别名会命中其他公司（页面会提示）。规则先于模型判断，所以模型看不到这两类错误。
+- 新建项目已不需要写 JSON；**补证白名单仍需手写 JSON**，新建项目暂不执行补证。信号词按字面匹配，对同义改写无能为力（评测集 E03、E04）。
 - **工作台只面向本机使用：** 没有登录与权限，没有做安全加固，**不适合直接部署到公网或多用户环境**。
 - 补证工具目前只覆盖 changedetection.io 快照和 GitHub；官网、新闻稿、监管披露还需要新的适配器。
 
@@ -165,7 +184,7 @@ TECHSIGNAL_CDIO_PYTHON="$(which python)" TECHSIGNAL_LIVE_NETWORK=1 python -m pyt
 
 本项目先在 changedetection.io 的 Fork 中以独立目录开发（`techsignal/`，PR #1），后用 `git subtree split` 提取为本仓库，**完整保留了 R1–R5 的提交历史**。
 
-- 各轮记录：[R1](docs/R1_ACCEPTANCE.md)、[R2](docs/R2_ACCEPTANCE.md)、[R3](docs/R3_ACCEPTANCE.md)、[R4](docs/R4_ACCEPTANCE.md)、[R5](docs/R5_ACCEPTANCE.md)。早期记录中的 `techsignal/...` 路径指的是 Fork 中的目录。
+- 各轮记录：[R1](docs/R1_ACCEPTANCE.md)、[R2](docs/R2_ACCEPTANCE.md)、[R3](docs/R3_ACCEPTANCE.md)、[R4](docs/R4_ACCEPTANCE.md)、[R5](docs/R5_ACCEPTANCE.md)、[R6](docs/R6_ACCEPTANCE.md)。早期记录中的 `techsignal/...` 路径指的是 Fork 中的目录。
 - 技术细节：[docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md)。
 - 演示讲解稿：[docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)。
 
