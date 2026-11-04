@@ -335,8 +335,8 @@ def test_workbench_listens_on_localhost_by_default(monkeypatch):
     import sys
     from techsignal.workbench import __main__ as wb
     seen = {}
+    stcli = pytest.importorskip("streamlit.web.cli")      # the `test` CI job installs without the UI extra
     monkeypatch.setattr(sys, "argv", ["x", "--server.port", "8600"])
-    import streamlit.web.cli as stcli
     monkeypatch.setattr(stcli, "main", lambda: seen.setdefault("argv", list(sys.argv)) and 0)
     wb.main()
     assert seen["argv"][seen["argv"].index("--server.address") + 1] == "127.0.0.1"
