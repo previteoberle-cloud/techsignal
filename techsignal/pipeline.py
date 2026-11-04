@@ -1,0 +1,112 @@
+"""End-to-end run: ChangesReport -> triage -> evidence ledger -> assessment -> brief -> validation."""
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass, field
+from typing import Any
+
+from .adapters.cdio import parse_changes_report
+from .assess import AssessStats, assess_event, recommend, resolve_conflicts
+from .brief import build_brief, render_markdown
+from .models import (
+    Assessment,
+    Brief,
+    ChangeEvent,
+    Evidence,
+    EvidenceGrade,
+    FilteredEvent,
+    Thesis,
+)
+from .providers import LLMProvider
+from .store import EvidenceLedger, SourceRegistry
+from .triage import build_evidence, clean_lines, fingerprint, pre_filter
+from .validate import assert_valid
+
+_GRADE_RANK = {EvidenceGrade.A: 0, EvidenceGrade.B: 1, EvidenceGrade.C: 2, EvidenceGrade.D: 3}
+
+
+@dataclass
+class RunResult:
+    meta: dict
+    events: list[ChangeEvent]
+    filtered: list[FilteredEvent]
+    evidence: dict[str, Evidence]
+    assessments: list[Assessment]
+    brief: Brief
+    markdown: str
+    stats: AssessStats
+    provider_name: str | None = None
+    notes: list[str] = field(default_factory=list)
+
+    def decision_log(self) -> dict:
+        return {
+            "meta": self.meta,
+            "provider": self.provider_name,
+            "stats": asdict(self.stats),
+            "filtered": [f.model_dump(mode="json") for f in self.filtered],
+            "assessments": [a.model_dump(mode="json") for a in self.assessments],
+        }
+
+    def by_watch(self, watch_uuid: str) -> list[Assessment]:
+        ids = {e.event_id for e in self.events if e.watch_uuid == watch_uuid}
+        return [a for a in self.assessments if a.event_id in ids]
+
+    def filtered_for(self, watch_uuid: str) -> FilteredEvent | None:
+        return next((f for f in self.filtered if f.watch_uuid == watch_uuid), None)
+
+
+def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
+                 provider: LLMProvider | None = None, ledger: EvidenceLedger | None = None,
+                 validate: bool = True) -> RunResult:
+    meta, events = parse_changes_report(report)
+    ledger = ledger if ledger is not None else EvidenceLedger()
+    stats = AssessStats()
+
+    # Oldest first, so "first seen" in duplicate detection means earliest observed.
+    events = sorted(events, key=lambda e: (e.to_timestamp, e.watch_uuid, e.event_id))
+    filtered: list[FilteredEvent] = []
+    used_evidence: dict[str, Evidence] = {}
+    assessments: list[Assessment] = []
+    seen: dict[str, Evidence] = {}
+
+    for event in events:
+        f = pre_filter(event)
+        if f:
+            filtered.append(f)
+            continue
+        t = clean_lines(event)
+        if t.is_empty:
+            filtered.append(FilteredEvent(
+                event_id=event.event_id, watch_uuid=event.watch_uuid, title=event.title,
+                reason_code="noise_only",
+                reason_zh=f"仅含噪声或位置移动：噪声 {len(t.dropped_noise)} 行，移动 {len(t.dropped_moved)} 行"))
+            continue
+
+        source = sources.profile(event.domain)
+        fp = fingerprint(t)
+        earlier = seen.get(fp) or ledger.find_by_fingerprint(fp, exclude_event=event.event_id)
+        if earlier and _GRADE_RANK[source.grade] >= _GRADE_RANK[earlier.grade]:
+            filtered.append(FilteredEvent(
+                event_id=event.event_id, watch_uuid=event.watch_uuid, title=event.title,
+                reason_code="duplicate", duplicate_of=earlier.evidence_id,
+                reason_zh=f"内容与已记录证据一致，且来源等级（{source.grade.value}）不高于原证据（{earlier.grade.value}）"))
+            continue
+
+        ev = build_evidence(event, t, source)
+        ledger.add(ev)
+        seen[fp] = ev
+        used_evidence[ev.evidence_id] = ev
+        assessments.extend(assess_event(event, t, ev, theses, provider, stats))
+
+    assessments = resolve_conflicts(assessments, used_evidence, stats)
+    assessments = [recommend(a) for a in assessments]
+
+    provider_name = getattr(provider, "name", None) if provider else None
+    brief = build_brief(meta, events, used_evidence, assessments, filtered, theses,
+                        provider_name, bool(provider and provider.is_mock))
+    md = render_markdown(brief)
+    if validate:
+        assert_valid(brief, md, ledger.ids(), {t.thesis_id for t in theses})
+
+    return RunResult(meta=meta, events=events, filtered=filtered, evidence=used_evidence,
+                     assessments=assessments, brief=brief, markdown=md, stats=stats,
+                     provider_name=provider_name)

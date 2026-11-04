@@ -1,0 +1,77 @@
+{
+  "id": "S12",
+  "title": "规则无法判定，交由模型层（Mock 回放）",
+  "category": "mock_model",
+  "fictional": true,
+  "note": "虚构测试数据：公司、来源与事件均为编造，仅用于验证处理逻辑。",
+  "from": 1790812800,
+  "to": 1793491199,
+  "provider": "mock",
+  "mock_replay": {
+    "00000000-0000-4000-8000-000000000015@1792056600#TH-002": {
+      "_note": "人工编写的 Mock 回放，非真实模型输出",
+      "direction": "weakens",
+      "assumption_id": "B1",
+      "rationale": "送样时间由明确的 2026 年第四季度改为“另行通知”，送样进度可能延后。",
+      "cited_evidence_ids": [
+        "$EVENT_EVIDENCE"
+      ],
+      "confidence": "high"
+    }
+  },
+  "watches": [
+    {
+      "uuid": "00000000-0000-4000-8000-000000000015",
+      "title": "澜芯光电产品中心",
+      "url": "https://www.lanxin-photonics.example/products",
+      "error": null,
+      "snapshots": {
+        "1790755200": "1.6T 硅光模块：预计2026年第四季度送样",
+        "1792056600": "1.6T 硅光模块：送样时间另行通知"
+      }
+    }
+  ],
+  "expect": {
+    "assessed": {
+      "00000000-0000-4000-8000-000000000015": [
+        {
+          "thesis_id": "TH-002",
+          "direction": "weakens",
+          "basis": "mock_model",
+          "assumption_id": "B1",
+          "confidence": "medium"
+        }
+      ]
+    },
+    "stats": {
+      "provider_calls": 1,
+      "provider_rejections": 0
+    }
+  },
+  "report": {
+    "from": 1790812800,
+    "to": 1793491199,
+    "mode": "net_change",
+    "total": 1,
+    "offset": 0,
+    "limit": 50,
+    "monitors_checked": 1,
+    "changes_total": 1,
+    "incomplete": false,
+    "watches": [
+      {
+        "uuid": "00000000-0000-4000-8000-000000000015",
+        "title": "澜芯光电产品中心",
+        "url": "https://www.lanxin-photonics.example/products",
+        "changes": 1,
+        "new_in_period": false,
+        "no_net_difference": false,
+        "error": null,
+        "from_timestamp": 1790755200,
+        "to_timestamp": 1792056600,
+        "diff": "--- 2026-09-30T08:00:00Z\n+++ 2026-10-15T09:30:00Z\n@@ -1 +1 @@\n-1.6T 硅光模块：预计2026年第四季度送样\n+1.6T 硅光模块：送样时间另行通知",
+        "truncated": false
+      }
+    ]
+  }
+}

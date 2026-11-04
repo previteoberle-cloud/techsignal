@@ -1,0 +1,11 @@
+{
+  "_notice": "全部为虚构来源，域名使用 RFC 2606 保留的 .example 顶级域，不指向任何真实网站。",
+  "sources": [
+    {"domain": "xingheng-semi.example", "name": "星衡半导体官网（虚构）", "source_type": "official", "grade": "A"},
+    {"domain": "lanxin-photonics.example", "name": "澜芯光电官网（虚构）", "source_type": "official", "grade": "A"},
+    {"domain": "disclosure.exchange.example", "name": "交易所信息披露（虚构）", "source_type": "regulator", "grade": "A"},
+    {"domain": "technews.example", "name": "科技日报网（虚构媒体）", "source_type": "media", "grade": "B"},
+    {"domain": "industry-insight.example", "name": "行业洞察转载站（虚构）", "source_type": "analyst", "grade": "C"},
+    {"domain": "chipforum.example", "name": "芯片论坛（虚构）", "source_type": "forum", "grade": "D"}
+  ]
+}

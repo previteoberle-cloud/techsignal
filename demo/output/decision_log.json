@@ -1,0 +1,269 @@
+{
+  "assessments": [
+    {
+      "assessment_id": "AS-a50e56a067",
+      "assumption_id": "A2",
+      "basis": "rule",
+      "confidence": "high",
+      "conflicting_evidence_ids": [],
+      "direction": "supports",
+      "event_id": "CE-d4d3351f9b",
+      "evidence_ids": [
+        "EV-5171402f06"
+      ],
+      "limitations": [],
+      "matched_signals": [
+        "A2·支持信号「良率(提升|达到|突破)」出现在新增内容：星衡半导体8英寸碳化硅衬底良率提升至65%"
+      ],
+      "model_rationale": null,
+      "open_questions": [],
+      "provider_name": null,
+      "rationale": [
+        "A2·支持信号「良率(提升|达到|突破)」出现在新增内容：星衡半导体8英寸碳化硅衬底良率提升至65%"
+      ],
+      "recommended_action": "记录为 TH-001·A2 的支持证据，维持原结论",
+      "tentative_direction": null,
+      "thesis_id": "TH-001",
+      "thesis_status_change": "none"
+    },
+    {
+      "assessment_id": "AS-d38a53b6aa",
+      "assumption_id": "A1",
+      "basis": "rule",
+      "confidence": "low",
+      "conflicting_evidence_ids": [
+        "EV-59e766edf9"
+      ],
+      "direction": "insufficient",
+      "event_id": "CE-c3e28add42",
+      "evidence_ids": [
+        "EV-8a29458440"
+      ],
+      "limitations": [
+        "存在相互矛盾的证据，系统不自动裁决"
+      ],
+      "matched_signals": [
+        "A1·支持信号「如期」出现在新增内容：8英寸碳化硅产线量产计划如期推进"
+      ],
+      "model_rationale": null,
+      "open_questions": [
+        "来源冲突（TH-001·A1）：EV-8a29458440（星衡半导体官网（虚构），等级 A）指向支持；EV-59e766edf9（科技日报网（虚构媒体），等级 B）指向削弱。需核实哪一方属实"
+      ],
+      "provider_name": null,
+      "rationale": [
+        "A1·支持信号「如期」出现在新增内容：8英寸碳化硅产线量产计划如期推进"
+      ],
+      "recommended_action": "列入待核实清单，补充一手来源后重新评估；在此之前不调整结论",
+      "tentative_direction": "supports",
+      "thesis_id": "TH-001",
+      "thesis_status_change": "none"
+    },
+    {
+      "assessment_id": "AS-f458f2fa0a",
+      "assumption_id": "B1",
+      "basis": "mock_model",
+      "confidence": "medium",
+      "conflicting_evidence_ids": [],
+      "direction": "weakens",
+      "event_id": "CE-f6ed6d825f",
+      "evidence_ids": [
+        "EV-e67441039b"
+      ],
+      "limitations": [],
+      "matched_signals": [],
+      "model_rationale": "送样时间由明确的 2026 年第四季度改为“另行通知”，送样进度可能延后。",
+      "open_questions": [
+        "该判断来自 Mock 回放（人工预置），未经真实模型或人工复核"
+      ],
+      "provider_name": "mock-replay",
+      "rationale": [
+        "变化提及「澜芯光电、澜芯」并涉及主题词「硅光、光模块、1.6T、送样」，但未命中任何确定性信号规则"
+      ],
+      "recommended_action": "建议研究负责人复核 TH-002 的假设 B1；系统未修改结论状态",
+      "tentative_direction": null,
+      "thesis_id": "TH-002",
+      "thesis_status_change": "none"
+    },
+    {
+      "assessment_id": "AS-cd8ac0e4e9",
+      "assumption_id": null,
+      "basis": "rule",
+      "confidence": "medium",
+      "conflicting_evidence_ids": [],
+      "direction": "unrelated",
+      "event_id": "CE-18fe1d4423",
+      "evidence_ids": [
+        "EV-62ea1eb9d5"
+      ],
+      "limitations": [],
+      "matched_signals": [],
+      "model_rationale": null,
+      "open_questions": [],
+      "provider_name": null,
+      "rationale": [
+        "变化提及「星衡半导体、星衡」，但未涉及研究判断 TH-001 的任何主题词，也未命中假设信号"
+      ],
+      "recommended_action": "无需动作",
+      "tentative_direction": null,
+      "thesis_id": "TH-001",
+      "thesis_status_change": "none"
+    },
+    {
+      "assessment_id": "AS-c2b1147551",
+      "assumption_id": null,
+      "basis": "rule",
+      "confidence": "high",
+      "conflicting_evidence_ids": [],
+      "direction": "unrelated",
+      "event_id": "CE-f0cbb7fdc1",
+      "evidence_ids": [
+        "EV-4aaee29726"
+      ],
+      "limitations": [],
+      "matched_signals": [],
+      "model_rationale": null,
+      "open_questions": [],
+      "provider_name": null,
+      "rationale": [
+        "变化内容未提及任何研究判断所跟踪的实体"
+      ],
+      "recommended_action": "无需动作",
+      "tentative_direction": null,
+      "thesis_id": null,
+      "thesis_status_change": "none"
+    },
+    {
+      "assessment_id": "AS-ced7b459fe",
+      "assumption_id": "A1",
+      "basis": "rule",
+      "confidence": "low",
+      "conflicting_evidence_ids": [
+        "EV-8a29458440"
+      ],
+      "direction": "insufficient",
+      "event_id": "CE-f17386e8a9",
+      "evidence_ids": [
+        "EV-59e766edf9"
+      ],
+      "limitations": [
+        "存在相互矛盾的证据，系统不自动裁决"
+      ],
+      "matched_signals": [
+        "A1·削弱信号「延期」出现在新增内容：星衡半导体8英寸产线量产延期至2027年底"
+      ],
+      "model_rationale": null,
+      "open_questions": [
+        "来源冲突（TH-001·A1）：EV-8a29458440（星衡半导体官网（虚构），等级 A）指向支持；EV-59e766edf9（科技日报网（虚构媒体），等级 B）指向削弱。需核实哪一方属实"
+      ],
+      "provider_name": null,
+      "rationale": [
+        "A1·削弱信号「延期」出现在新增内容：星衡半导体8英寸产线量产延期至2027年底"
+      ],
+      "recommended_action": "列入待核实清单，补充一手来源后重新评估；在此之前不调整结论",
+      "tentative_direction": "weakens",
+      "thesis_id": "TH-001",
+      "thesis_status_change": "none"
+    },
+    {
+      "assessment_id": "AS-0686d5899d",
+      "assumption_id": "A3",
+      "basis": "rule",
+      "confidence": "low",
+      "conflicting_evidence_ids": [],
+      "direction": "insufficient",
+      "event_id": "CE-d1cc62704c",
+      "evidence_ids": [
+        "EV-b009513d97"
+      ],
+      "limitations": [
+        "来源等级 D 不足以单独支撑方向判断"
+      ],
+      "matched_signals": [
+        "A3·削弱信号「(终止|取消).{0,8}(合作|订单)」出现在新增内容：传闻星衡半导体大客户终止合作"
+      ],
+      "model_rationale": null,
+      "open_questions": [
+        "需要一手来源（公司公告或监管文件）确认「芯片论坛（虚构）」的说法"
+      ],
+      "provider_name": null,
+      "rationale": [
+        "A3·削弱信号「(终止|取消).{0,8}(合作|订单)」出现在新增内容：传闻星衡半导体大客户终止合作"
+      ],
+      "recommended_action": "列入待核实清单，补充一手来源后重新评估；在此之前不调整结论",
+      "tentative_direction": "weakens",
+      "thesis_id": "TH-001",
+      "thesis_status_change": "none"
+    },
+    {
+      "assessment_id": "AS-626297d9f6",
+      "assumption_id": "B2",
+      "basis": "rule",
+      "confidence": "medium",
+      "conflicting_evidence_ids": [],
+      "direction": "weakens",
+      "event_id": "CE-48bf981cad",
+      "evidence_ids": [
+        "EV-ba43e27873"
+      ],
+      "limitations": [],
+      "matched_signals": [
+        "B2·削弱信号「取消.{0,20}订单」出现在新增内容：某北美云厂商取消向澜芯光电采购1.6T光模块的订单"
+      ],
+      "model_rationale": null,
+      "open_questions": [],
+      "provider_name": null,
+      "rationale": [
+        "B2·削弱信号「取消.{0,20}订单」出现在新增内容：某北美云厂商取消向澜芯光电采购1.6T光模块的订单"
+      ],
+      "recommended_action": "建议研究负责人复核 TH-002 的假设 B2；系统未修改结论状态",
+      "tentative_direction": null,
+      "thesis_id": "TH-002",
+      "thesis_status_change": "none"
+    }
+  ],
+  "filtered": [
+    {
+      "duplicate_of": null,
+      "event_id": "CE-a0461865c3",
+      "reason_code": "noise_only",
+      "reason_zh": "仅含噪声或位置移动：噪声 2 行，移动 0 行",
+      "title": "澜芯光电新闻中心",
+      "watch_uuid": "00000000-0000-4000-8000-000000000909"
+    },
+    {
+      "duplicate_of": "EV-5171402f06",
+      "event_id": "CE-9611621ea6",
+      "reason_code": "duplicate",
+      "reason_zh": "内容与已记录证据一致，且来源等级（C）不高于原证据（A）",
+      "title": "行业洞察｜转载",
+      "watch_uuid": "00000000-0000-4000-8000-000000000902"
+    },
+    {
+      "duplicate_of": null,
+      "event_id": "CE-7989a8bb45",
+      "reason_code": "no_net_difference",
+      "reason_zh": "期间内有 2 次变化，但首尾无净差异",
+      "title": "交易所公告｜星衡半导体",
+      "watch_uuid": "00000000-0000-4000-8000-000000000911"
+    }
+  ],
+  "meta": {
+    "changes_total": 12,
+    "from": 1790812800,
+    "incomplete": false,
+    "mode": "net_change",
+    "monitors_checked": 11,
+    "to": 1793491199,
+    "total": 11
+  },
+  "provider": "mock-replay",
+  "stats": {
+    "conflicts": 1,
+    "grade_downgrades": 1,
+    "notes": [],
+    "provider_calls": 1,
+    "provider_failures": 0,
+    "provider_rejections": 0,
+    "rule_decisions": 7
+  }
+}

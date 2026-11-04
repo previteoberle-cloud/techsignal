@@ -1,0 +1,37 @@
+{
+  "id": "S20",
+  "title": "异常输入：时间戳类型错误（字符串）",
+  "category": "bad_input",
+  "fictional": true,
+  "note": "虚构测试数据：公司、来源与事件均为编造，仅用于验证处理逻辑。",
+  "provider": "none",
+  "raw_input": {
+    "from": 1790812800,
+    "to": 1793491199,
+    "mode": "net_change",
+    "total": 1,
+    "offset": 0,
+    "limit": 50,
+    "monitors_checked": 1,
+    "changes_total": 1,
+    "incomplete": false,
+    "watches": [
+      {
+        "uuid": "x",
+        "title": "t",
+        "url": "https://technews.example/",
+        "changes": 1,
+        "new_in_period": false,
+        "no_net_difference": false,
+        "error": null,
+        "from_timestamp": 1790755200,
+        "to_timestamp": "1792056600",
+        "diff": "+a",
+        "truncated": false
+      }
+    ]
+  },
+  "expect": {
+    "error": "AdapterError"
+  }
+}

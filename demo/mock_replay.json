@@ -1,0 +1,15 @@
+{
+  "_notice": "Mock 回放文件：以下条目为人工编写，用于演示模型层接口，不是任何真实大模型的输出。",
+  "entries": {
+    "00000000-0000-4000-8000-000000000907@1792056600#TH-002": {
+      "_note": "人工编写，非真实模型输出",
+      "direction": "weakens",
+      "assumption_id": "B1",
+      "rationale": "送样时间由明确的 2026 年第四季度改为“另行通知”，送样进度可能延后。",
+      "cited_evidence_ids": [
+        "$EVENT_EVIDENCE"
+      ],
+      "confidence": "medium"
+    }
+  }
+}

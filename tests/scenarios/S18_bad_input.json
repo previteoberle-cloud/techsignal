@@ -1,0 +1,12 @@
+{
+  "id": "S18",
+  "title": "异常输入：不是合法 JSON",
+  "category": "bad_input",
+  "fictional": true,
+  "note": "虚构测试数据：公司、来源与事件均为编造，仅用于验证处理逻辑。",
+  "provider": "none",
+  "raw_input": "{not json",
+  "expect": {
+    "error": "AdapterError"
+  }
+}

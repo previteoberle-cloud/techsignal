@@ -1,0 +1,59 @@
+{
+  "id": "S04",
+  "title": "提及公司但与研究主题无关（招聘信息）",
+  "category": "unrelated",
+  "fictional": true,
+  "note": "虚构测试数据：公司、来源与事件均为编造，仅用于验证处理逻辑。",
+  "from": 1790812800,
+  "to": 1793491199,
+  "provider": "none",
+  "watches": [
+    {
+      "uuid": "00000000-0000-4000-8000-000000000004",
+      "title": "星衡半导体招聘",
+      "url": "https://www.xingheng-semi.example/careers",
+      "error": null,
+      "snapshots": {
+        "1790755200": "开放职位\n财务经理",
+        "1792056600": "开放职位\n行政专员（上海）—— 负责办公室日常事务\n财务经理"
+      }
+    }
+  ],
+  "expect": {
+    "assessed": {
+      "00000000-0000-4000-8000-000000000004": [
+        {
+          "thesis_id": "TH-001",
+          "direction": "unrelated",
+          "basis": "rule"
+        }
+      ]
+    }
+  },
+  "report": {
+    "from": 1790812800,
+    "to": 1793491199,
+    "mode": "net_change",
+    "total": 1,
+    "offset": 0,
+    "limit": 50,
+    "monitors_checked": 1,
+    "changes_total": 1,
+    "incomplete": false,
+    "watches": [
+      {
+        "uuid": "00000000-0000-4000-8000-000000000004",
+        "title": "星衡半导体招聘",
+        "url": "https://www.xingheng-semi.example/careers",
+        "changes": 1,
+        "new_in_period": false,
+        "no_net_difference": false,
+        "error": null,
+        "from_timestamp": 1790755200,
+        "to_timestamp": 1792056600,
+        "diff": "--- 2026-09-30T08:00:00Z\n+++ 2026-10-15T09:30:00Z\n@@ -1,2 +1,3 @@\n 开放职位\n+行政专员（上海）—— 负责办公室日常事务\n 财务经理",
+        "truncated": false
+      }
+    ]
+  }
+}

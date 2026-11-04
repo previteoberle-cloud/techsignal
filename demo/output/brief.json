@@ -1,0 +1,784 @@
+{
+  "disclaimers": [
+    "本速览为 TechSignal R1 研究原型的输出，不构成投资建议。",
+    "输入为 changedetection.io GET /api/v1/changes?format=json 的离线数据；R1 未接入在线服务。",
+    "结论状态不会因新信息自动改变；「削弱」仅触发人工复核建议。",
+    "标注「Mock 回放（人工预置，非真实模型推理）」的判断来自人工预置的 Mock 回放（mock-replay），不是真实大模型推理。"
+  ],
+  "filtered": [
+    {
+      "duplicate_of": null,
+      "event_id": "CE-a0461865c3",
+      "reason_code": "noise_only",
+      "reason_zh": "仅含噪声或位置移动：噪声 2 行，移动 0 行",
+      "title": "澜芯光电新闻中心",
+      "watch_uuid": "00000000-0000-4000-8000-000000000909"
+    },
+    {
+      "duplicate_of": "EV-5171402f06",
+      "event_id": "CE-9611621ea6",
+      "reason_code": "duplicate",
+      "reason_zh": "内容与已记录证据一致，且来源等级（C）不高于原证据（A）",
+      "title": "行业洞察｜转载",
+      "watch_uuid": "00000000-0000-4000-8000-000000000902"
+    },
+    {
+      "duplicate_of": null,
+      "event_id": "CE-7989a8bb45",
+      "reason_code": "no_net_difference",
+      "reason_zh": "期间内有 2 次变化，但首尾无净差异",
+      "title": "交易所公告｜星衡半导体",
+      "watch_uuid": "00000000-0000-4000-8000-000000000911"
+    }
+  ],
+  "items": [
+    {
+      "actions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "action",
+          "text": "建议研究负责人复核 TH-002 的假设 B1；系统未修改结论状态",
+          "thesis_ids": []
+        }
+      ],
+      "direction": "weakens",
+      "evidence_grade": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-e67441039b"
+          ],
+          "kind": "fact",
+          "text": "EV-e67441039b：A｜公司官方一手披露",
+          "thesis_ids": []
+        }
+      ],
+      "headline": "削弱历史判断｜澜芯光电 1.6T 硅光模块订单｜澜芯光电产品中心",
+      "impact": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-e67441039b"
+          ],
+          "kind": "inference",
+          "text": "影响方向：削弱历史判断；置信度 medium；判定层：Mock 回放（人工预置，非真实模型推理）",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "结论状态保持「active」，系统不会因新信息自动修改历史结论",
+          "thesis_ids": [
+            "TH-002"
+          ]
+        }
+      ],
+      "item_id": "AS-f458f2fa0a",
+      "new_info": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-e67441039b"
+          ],
+          "kind": "fact",
+          "text": "新增：1.6T 硅光模块：送样时间另行通知",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-e67441039b"
+          ],
+          "kind": "fact",
+          "text": "删除：1.6T 硅光模块：预计2026年第四季度送样",
+          "thesis_ids": []
+        }
+      ],
+      "open_questions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "question",
+          "text": "该判断来自 Mock 回放（人工预置），未经真实模型或人工复核",
+          "thesis_ids": []
+        }
+      ],
+      "priority": "P1",
+      "reasoning": [
+        {
+          "basis": "rule",
+          "evidence_ids": [
+            "EV-e67441039b"
+          ],
+          "kind": "inference",
+          "text": "规则层：变化提及「澜芯光电、澜芯」并涉及主题词「硅光、光模块、1.6T、送样」，但未命中任何确定性信号规则",
+          "thesis_ids": []
+        },
+        {
+          "basis": "mock_model",
+          "evidence_ids": [
+            "EV-e67441039b"
+          ],
+          "kind": "inference",
+          "text": "模型层：送样时间由明确的 2026 年第四季度改为“另行通知”，送样进度可能延后。",
+          "thesis_ids": []
+        }
+      ],
+      "sources": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-e67441039b"
+          ],
+          "kind": "fact",
+          "text": "澜芯光电官网（虚构）（公司官方）https://www.lanxin-photonics.example/products；观测于 2026-10-15 09:30 UTC，对比基线 2026-09-30 08:00 UTC；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000907/difference/1790755200/1792056600",
+          "thesis_ids": []
+        }
+      ],
+      "thesis_context": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "澜芯光电 1.6T 硅光模块订单：澜芯光电（虚构）1.6T 硅光模块将在 2027 年获得北美云厂商批量订单。（截至 2026-09-20，负责人 研究员乙（虚构））",
+          "thesis_ids": [
+            "TH-002"
+          ]
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "相关假设 B1：1.6T 产品 2026 年第四季度完成客户送样",
+          "thesis_ids": [
+            "TH-002"
+          ]
+        }
+      ]
+    },
+    {
+      "actions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "action",
+          "text": "建议研究负责人复核 TH-002 的假设 B2；系统未修改结论状态",
+          "thesis_ids": []
+        }
+      ],
+      "direction": "weakens",
+      "evidence_grade": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-ba43e27873"
+          ],
+          "kind": "fact",
+          "text": "EV-ba43e27873：B｜监管文件或权威媒体",
+          "thesis_ids": []
+        }
+      ],
+      "headline": "削弱历史判断｜澜芯光电 1.6T 硅光模块订单｜科技日报网｜通信",
+      "impact": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-ba43e27873"
+          ],
+          "kind": "inference",
+          "text": "影响方向：削弱历史判断；置信度 medium；判定层：确定性规则",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "结论状态保持「active」，系统不会因新信息自动修改历史结论",
+          "thesis_ids": [
+            "TH-002"
+          ]
+        }
+      ],
+      "item_id": "AS-626297d9f6",
+      "new_info": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-ba43e27873"
+          ],
+          "kind": "fact",
+          "text": "新增：某北美云厂商取消向澜芯光电采购1.6T光模块的订单",
+          "thesis_ids": []
+        }
+      ],
+      "open_questions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "question",
+          "text": "无",
+          "thesis_ids": []
+        }
+      ],
+      "priority": "P1",
+      "reasoning": [
+        {
+          "basis": "rule",
+          "evidence_ids": [
+            "EV-ba43e27873"
+          ],
+          "kind": "inference",
+          "text": "规则层：B2·削弱信号「取消.{0,20}订单」出现在新增内容：某北美云厂商取消向澜芯光电采购1.6T光模块的订单",
+          "thesis_ids": []
+        }
+      ],
+      "sources": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-ba43e27873"
+          ],
+          "kind": "fact",
+          "text": "科技日报网（虚构媒体）（媒体）https://technews.example/telecom；观测于 2026-10-20 03:00 UTC，对比基线 2026-09-30 08:00 UTC；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000906/difference/1790755200/1792465200",
+          "thesis_ids": []
+        }
+      ],
+      "thesis_context": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "澜芯光电 1.6T 硅光模块订单：澜芯光电（虚构）1.6T 硅光模块将在 2027 年获得北美云厂商批量订单。（截至 2026-09-20，负责人 研究员乙（虚构））",
+          "thesis_ids": [
+            "TH-002"
+          ]
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "相关假设 B2：北美云厂商给出批量订单",
+          "thesis_ids": [
+            "TH-002"
+          ]
+        }
+      ]
+    },
+    {
+      "actions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "action",
+          "text": "列入待核实清单，补充一手来源后重新评估；在此之前不调整结论",
+          "thesis_ids": []
+        }
+      ],
+      "direction": "insufficient",
+      "evidence_grade": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-8a29458440"
+          ],
+          "kind": "fact",
+          "text": "EV-8a29458440：A｜公司官方一手披露",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-59e766edf9"
+          ],
+          "kind": "fact",
+          "text": "EV-59e766edf9：B｜监管文件或权威媒体",
+          "thesis_ids": []
+        }
+      ],
+      "headline": "证据不足，需要核实｜星衡半导体碳化硅衬底量产｜星衡半导体产品路线图",
+      "impact": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-8a29458440",
+            "EV-59e766edf9"
+          ],
+          "kind": "inference",
+          "text": "影响方向：证据不足，需要核实（初步信号指向「支持历史判断」，已因证据限制降级）；置信度 low；判定层：确定性规则",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "结论状态保持「active」，系统不会因新信息自动修改历史结论",
+          "thesis_ids": [
+            "TH-001"
+          ]
+        }
+      ],
+      "item_id": "AS-d38a53b6aa",
+      "new_info": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-8a29458440"
+          ],
+          "kind": "fact",
+          "text": "新增：8英寸碳化硅产线量产计划如期推进",
+          "thesis_ids": []
+        }
+      ],
+      "open_questions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "question",
+          "text": "来源冲突（TH-001·A1）：EV-8a29458440（星衡半导体官网（虚构），等级 A）指向支持；EV-59e766edf9（科技日报网（虚构媒体），等级 B）指向削弱。需核实哪一方属实",
+          "thesis_ids": []
+        }
+      ],
+      "priority": "P2",
+      "reasoning": [
+        {
+          "basis": "rule",
+          "evidence_ids": [
+            "EV-8a29458440"
+          ],
+          "kind": "inference",
+          "text": "规则层：A1·支持信号「如期」出现在新增内容：8英寸碳化硅产线量产计划如期推进",
+          "thesis_ids": []
+        },
+        {
+          "basis": "rule",
+          "evidence_ids": [
+            "EV-8a29458440",
+            "EV-59e766edf9"
+          ],
+          "kind": "inference",
+          "text": "限制：存在相互矛盾的证据，系统不自动裁决",
+          "thesis_ids": []
+        }
+      ],
+      "sources": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-8a29458440"
+          ],
+          "kind": "fact",
+          "text": "星衡半导体官网（虚构）（公司官方）https://www.xingheng-semi.example/roadmap；观测于 2026-10-15 09:30 UTC，对比基线 2026-09-30 08:00 UTC；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000903/difference/1790755200/1792056600",
+          "thesis_ids": []
+        }
+      ],
+      "thesis_context": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "星衡半导体碳化硅衬底量产：星衡半导体（虚构）8 英寸碳化硅衬底产线将于 2027 年第二季度前量产，良率爬坡与车规客户导入支撑其 2027 年收入翻倍。（截至 2026-09-15，负责人 研究员甲（虚构））",
+          "thesis_ids": [
+            "TH-001"
+          ]
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "相关假设 A1：8 英寸产线量产时间表按计划推进（2027Q2 前）",
+          "thesis_ids": [
+            "TH-001"
+          ]
+        }
+      ]
+    },
+    {
+      "actions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "action",
+          "text": "列入待核实清单，补充一手来源后重新评估；在此之前不调整结论",
+          "thesis_ids": []
+        }
+      ],
+      "direction": "insufficient",
+      "evidence_grade": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-59e766edf9"
+          ],
+          "kind": "fact",
+          "text": "EV-59e766edf9：B｜监管文件或权威媒体",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-8a29458440"
+          ],
+          "kind": "fact",
+          "text": "EV-8a29458440：A｜公司官方一手披露",
+          "thesis_ids": []
+        }
+      ],
+      "headline": "证据不足，需要核实｜星衡半导体碳化硅衬底量产｜科技日报网｜半导体",
+      "impact": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-59e766edf9",
+            "EV-8a29458440"
+          ],
+          "kind": "inference",
+          "text": "影响方向：证据不足，需要核实（初步信号指向「削弱历史判断」，已因证据限制降级）；置信度 low；判定层：确定性规则",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "结论状态保持「active」，系统不会因新信息自动修改历史结论",
+          "thesis_ids": [
+            "TH-001"
+          ]
+        }
+      ],
+      "item_id": "AS-ced7b459fe",
+      "new_info": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-59e766edf9"
+          ],
+          "kind": "fact",
+          "text": "新增：星衡半导体8英寸产线量产延期至2027年底",
+          "thesis_ids": []
+        }
+      ],
+      "open_questions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "question",
+          "text": "来源冲突（TH-001·A1）：EV-8a29458440（星衡半导体官网（虚构），等级 A）指向支持；EV-59e766edf9（科技日报网（虚构媒体），等级 B）指向削弱。需核实哪一方属实",
+          "thesis_ids": []
+        }
+      ],
+      "priority": "P2",
+      "reasoning": [
+        {
+          "basis": "rule",
+          "evidence_ids": [
+            "EV-59e766edf9"
+          ],
+          "kind": "inference",
+          "text": "规则层：A1·削弱信号「延期」出现在新增内容：星衡半导体8英寸产线量产延期至2027年底",
+          "thesis_ids": []
+        },
+        {
+          "basis": "rule",
+          "evidence_ids": [
+            "EV-59e766edf9",
+            "EV-8a29458440"
+          ],
+          "kind": "inference",
+          "text": "限制：存在相互矛盾的证据，系统不自动裁决",
+          "thesis_ids": []
+        }
+      ],
+      "sources": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-59e766edf9"
+          ],
+          "kind": "fact",
+          "text": "科技日报网（虚构媒体）（媒体）https://technews.example/semi；观测于 2026-10-20 03:00 UTC，对比基线 2026-09-30 08:00 UTC；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000904/difference/1790755200/1792465200",
+          "thesis_ids": []
+        }
+      ],
+      "thesis_context": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "星衡半导体碳化硅衬底量产：星衡半导体（虚构）8 英寸碳化硅衬底产线将于 2027 年第二季度前量产，良率爬坡与车规客户导入支撑其 2027 年收入翻倍。（截至 2026-09-15，负责人 研究员甲（虚构））",
+          "thesis_ids": [
+            "TH-001"
+          ]
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "相关假设 A1：8 英寸产线量产时间表按计划推进（2027Q2 前）",
+          "thesis_ids": [
+            "TH-001"
+          ]
+        }
+      ]
+    },
+    {
+      "actions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "action",
+          "text": "列入待核实清单，补充一手来源后重新评估；在此之前不调整结论",
+          "thesis_ids": []
+        }
+      ],
+      "direction": "insufficient",
+      "evidence_grade": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-b009513d97"
+          ],
+          "kind": "fact",
+          "text": "EV-b009513d97：D｜未经证实（论坛、匿名或未知来源）",
+          "thesis_ids": []
+        }
+      ],
+      "headline": "证据不足，需要核实｜星衡半导体碳化硅衬底量产｜芯片论坛｜热帖",
+      "impact": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-b009513d97"
+          ],
+          "kind": "inference",
+          "text": "影响方向：证据不足，需要核实（初步信号指向「削弱历史判断」，已因证据限制降级）；置信度 low；判定层：确定性规则",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "结论状态保持「active」，系统不会因新信息自动修改历史结论",
+          "thesis_ids": [
+            "TH-001"
+          ]
+        }
+      ],
+      "item_id": "AS-0686d5899d",
+      "new_info": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-b009513d97"
+          ],
+          "kind": "fact",
+          "text": "新增：传闻星衡半导体大客户终止合作",
+          "thesis_ids": []
+        }
+      ],
+      "open_questions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "question",
+          "text": "需要一手来源（公司公告或监管文件）确认「芯片论坛（虚构）」的说法",
+          "thesis_ids": []
+        }
+      ],
+      "priority": "P2",
+      "reasoning": [
+        {
+          "basis": "rule",
+          "evidence_ids": [
+            "EV-b009513d97"
+          ],
+          "kind": "inference",
+          "text": "规则层：A3·削弱信号「(终止|取消).{0,8}(合作|订单)」出现在新增内容：传闻星衡半导体大客户终止合作",
+          "thesis_ids": []
+        },
+        {
+          "basis": "rule",
+          "evidence_ids": [
+            "EV-b009513d97"
+          ],
+          "kind": "inference",
+          "text": "限制：来源等级 D 不足以单独支撑方向判断",
+          "thesis_ids": []
+        }
+      ],
+      "sources": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-b009513d97"
+          ],
+          "kind": "fact",
+          "text": "芯片论坛（虚构）（论坛/社区）https://chipforum.example/t/88；观测于 2026-10-20 03:00 UTC，对比基线 2026-09-30 08:00 UTC；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000905/difference/1790755200/1792465200",
+          "thesis_ids": []
+        }
+      ],
+      "thesis_context": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "星衡半导体碳化硅衬底量产：星衡半导体（虚构）8 英寸碳化硅衬底产线将于 2027 年第二季度前量产，良率爬坡与车规客户导入支撑其 2027 年收入翻倍。（截至 2026-09-15，负责人 研究员甲（虚构））",
+          "thesis_ids": [
+            "TH-001"
+          ]
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "相关假设 A3：至少一家车规级客户完成认证并签署供货协议",
+          "thesis_ids": [
+            "TH-001"
+          ]
+        }
+      ]
+    },
+    {
+      "actions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "action",
+          "text": "记录为 TH-001·A2 的支持证据，维持原结论",
+          "thesis_ids": []
+        }
+      ],
+      "direction": "supports",
+      "evidence_grade": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5171402f06"
+          ],
+          "kind": "fact",
+          "text": "EV-5171402f06：A｜公司官方一手披露",
+          "thesis_ids": []
+        }
+      ],
+      "headline": "支持历史判断｜星衡半导体碳化硅衬底量产｜星衡半导体新闻中心",
+      "impact": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5171402f06"
+          ],
+          "kind": "inference",
+          "text": "影响方向：支持历史判断；置信度 high；判定层：确定性规则",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "结论状态保持「active」，系统不会因新信息自动修改历史结论",
+          "thesis_ids": [
+            "TH-001"
+          ]
+        }
+      ],
+      "item_id": "AS-a50e56a067",
+      "new_info": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5171402f06"
+          ],
+          "kind": "fact",
+          "text": "新增：星衡半导体8英寸碳化硅衬底良率提升至65%",
+          "thesis_ids": []
+        }
+      ],
+      "open_questions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "question",
+          "text": "无",
+          "thesis_ids": []
+        }
+      ],
+      "priority": "P3",
+      "reasoning": [
+        {
+          "basis": "rule",
+          "evidence_ids": [
+            "EV-5171402f06"
+          ],
+          "kind": "inference",
+          "text": "规则层：A2·支持信号「良率(提升|达到|突破)」出现在新增内容：星衡半导体8英寸碳化硅衬底良率提升至65%",
+          "thesis_ids": []
+        }
+      ],
+      "sources": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5171402f06"
+          ],
+          "kind": "fact",
+          "text": "星衡半导体官网（虚构）（公司官方）https://ir.xingheng-semi.example/news；观测于 2026-10-15 09:30 UTC，对比基线 2026-09-30 08:00 UTC；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000901/difference/1790755200/1792056600",
+          "thesis_ids": []
+        }
+      ],
+      "thesis_context": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "星衡半导体碳化硅衬底量产：星衡半导体（虚构）8 英寸碳化硅衬底产线将于 2027 年第二季度前量产，良率爬坡与车规客户导入支撑其 2027 年收入翻倍。（截至 2026-09-15，负责人 研究员甲（虚构））",
+          "thesis_ids": [
+            "TH-001"
+          ]
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "相关假设 A2：良率在 2026 年底前达到 60% 以上的经济门槛",
+          "thesis_ids": [
+            "TH-001"
+          ]
+        }
+      ]
+    }
+  ],
+  "mock_used": true,
+  "period_from": 1790812800,
+  "period_to": 1793491199,
+  "stats": {
+    "assessments": 8,
+    "events_filtered": 3,
+    "events_total": 11,
+    "insufficient": 3,
+    "supports": 1,
+    "unrelated": 2,
+    "weakens": 2
+  },
+  "title": "TechSignal 研究速览｜2026-10-01 至 2026-10-31",
+  "unrelated": [
+    {
+      "basis": "rule",
+      "evidence_ids": [
+        "EV-62ea1eb9d5"
+      ],
+      "kind": "inference",
+      "text": "「星衡半导体招聘」与研究判断 TH-001 无关：变化提及「星衡半导体、星衡」，但未涉及研究判断 TH-001 的任何主题词，也未命中假设信号",
+      "thesis_ids": []
+    },
+    {
+      "basis": "rule",
+      "evidence_ids": [
+        "EV-4aaee29726"
+      ],
+      "kind": "inference",
+      "text": "「科技日报网｜消费」与所有研究判断无关：变化内容未提及任何研究判断所跟踪的实体",
+      "thesis_ids": []
+    }
+  ]
+}

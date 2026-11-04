@@ -1,0 +1,61 @@
+{
+  "id": "S02",
+  "title": "权威媒体报道量产推迟：削弱判断（结论不自动修改）",
+  "category": "weakens",
+  "fictional": true,
+  "note": "虚构测试数据：公司、来源与事件均为编造，仅用于验证处理逻辑。",
+  "from": 1790812800,
+  "to": 1793491199,
+  "provider": "none",
+  "watches": [
+    {
+      "uuid": "00000000-0000-4000-8000-000000000002",
+      "title": "科技日报网｜半导体",
+      "url": "https://technews.example/semi",
+      "error": null,
+      "snapshots": {
+        "1790755200": "半导体频道\n其他新闻",
+        "1792056600": "半导体频道\n星衡半导体8英寸碳化硅产线量产时间推迟至2027年第四季度\n其他新闻"
+      }
+    }
+  ],
+  "expect": {
+    "assessed": {
+      "00000000-0000-4000-8000-000000000002": [
+        {
+          "thesis_id": "TH-001",
+          "direction": "weakens",
+          "basis": "rule",
+          "assumption_id": "A1",
+          "confidence": "medium"
+        }
+      ]
+    }
+  },
+  "report": {
+    "from": 1790812800,
+    "to": 1793491199,
+    "mode": "net_change",
+    "total": 1,
+    "offset": 0,
+    "limit": 50,
+    "monitors_checked": 1,
+    "changes_total": 1,
+    "incomplete": false,
+    "watches": [
+      {
+        "uuid": "00000000-0000-4000-8000-000000000002",
+        "title": "科技日报网｜半导体",
+        "url": "https://technews.example/semi",
+        "changes": 1,
+        "new_in_period": false,
+        "no_net_difference": false,
+        "error": null,
+        "from_timestamp": 1790755200,
+        "to_timestamp": 1792056600,
+        "diff": "--- 2026-09-30T08:00:00Z\n+++ 2026-10-15T09:30:00Z\n@@ -1,2 +1,3 @@\n 半导体频道\n+星衡半导体8英寸碳化硅产线量产时间推迟至2027年第四季度\n 其他新闻",
+        "truncated": false
+      }
+    ]
+  }
+}

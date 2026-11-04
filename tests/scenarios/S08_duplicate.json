@@ -1,0 +1,91 @@
+{
+  "id": "S08",
+  "title": "论坛先发、官方后证实：高等级来源不被当作重复丢弃",
+  "category": "duplicate",
+  "fictional": true,
+  "note": "虚构测试数据：公司、来源与事件均为编造，仅用于验证处理逻辑。",
+  "from": 1790812800,
+  "to": 1793491199,
+  "provider": "none",
+  "watches": [
+    {
+      "uuid": "00000000-0000-4000-8000-000000000009",
+      "title": "芯片论坛｜热帖",
+      "url": "https://chipforum.example/t/1",
+      "error": null,
+      "snapshots": {
+        "1790755200": "热帖",
+        "1792056600": "热帖\n星衡半导体与某车企签署碳化硅衬底长期供货协议"
+      }
+    },
+    {
+      "uuid": "00000000-0000-4000-8000-000000000010",
+      "title": "星衡半导体新闻中心",
+      "url": "https://ir.xingheng-semi.example/news",
+      "error": null,
+      "snapshots": {
+        "1790755200": "最新动态",
+        "1792465200": "最新动态\n星衡半导体与某车企签署碳化硅衬底长期供货协议"
+      }
+    }
+  ],
+  "expect": {
+    "assessed": {
+      "00000000-0000-4000-8000-000000000009": [
+        {
+          "thesis_id": "TH-001",
+          "direction": "insufficient",
+          "tentative_direction": "supports",
+          "basis": "rule"
+        }
+      ],
+      "00000000-0000-4000-8000-000000000010": [
+        {
+          "thesis_id": "TH-001",
+          "direction": "supports",
+          "basis": "rule",
+          "assumption_id": "A3"
+        }
+      ]
+    }
+  },
+  "report": {
+    "from": 1790812800,
+    "to": 1793491199,
+    "mode": "net_change",
+    "total": 2,
+    "offset": 0,
+    "limit": 50,
+    "monitors_checked": 2,
+    "changes_total": 2,
+    "incomplete": false,
+    "watches": [
+      {
+        "uuid": "00000000-0000-4000-8000-000000000010",
+        "title": "星衡半导体新闻中心",
+        "url": "https://ir.xingheng-semi.example/news",
+        "changes": 1,
+        "new_in_period": false,
+        "no_net_difference": false,
+        "error": null,
+        "from_timestamp": 1790755200,
+        "to_timestamp": 1792465200,
+        "diff": "--- 2026-09-30T08:00:00Z\n+++ 2026-10-20T03:00:00Z\n@@ -1 +1,2 @@\n 最新动态\n+星衡半导体与某车企签署碳化硅衬底长期供货协议",
+        "truncated": false
+      },
+      {
+        "uuid": "00000000-0000-4000-8000-000000000009",
+        "title": "芯片论坛｜热帖",
+        "url": "https://chipforum.example/t/1",
+        "changes": 1,
+        "new_in_period": false,
+        "no_net_difference": false,
+        "error": null,
+        "from_timestamp": 1790755200,
+        "to_timestamp": 1792056600,
+        "diff": "--- 2026-09-30T08:00:00Z\n+++ 2026-10-15T09:30:00Z\n@@ -1 +1,2 @@\n 热帖\n+星衡半导体与某车企签署碳化硅衬底长期供货协议",
+        "truncated": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "S15",
+  "title": "否定语境（否认推迟）：规则不判为削弱",
+  "category": "negation",
+  "fictional": true,
+  "note": "虚构测试数据：公司、来源与事件均为编造，仅用于验证处理逻辑。",
+  "from": 1790812800,
+  "to": 1793491199,
+  "provider": "none",
+  "watches": [
+    {
+      "uuid": "00000000-0000-4000-8000-000000000018",
+      "title": "星衡半导体新闻中心",
+      "url": "https://ir.xingheng-semi.example/news",
+      "error": null,
+      "snapshots": {
+        "1790755200": "最新动态",
+        "1792056600": "最新动态\n星衡半导体否认推迟量产，8英寸产线按计划推进"
+      }
+    }
+  ],
+  "expect": {
+    "assessed": {
+      "00000000-0000-4000-8000-000000000018": [
+        {
+          "thesis_id": "TH-001",
+          "direction": "insufficient",
+          "basis": "rule"
+        }
+      ]
+    }
+  },
+  "report": {
+    "from": 1790812800,
+    "to": 1793491199,
+    "mode": "net_change",
+    "total": 1,
+    "offset": 0,
+    "limit": 50,
+    "monitors_checked": 1,
+    "changes_total": 1,
+    "incomplete": false,
+    "watches": [
+      {
+        "uuid": "00000000-0000-4000-8000-000000000018",
+        "title": "星衡半导体新闻中心",
+        "url": "https://ir.xingheng-semi.example/news",
+        "changes": 1,
+        "new_in_period": false,
+        "no_net_difference": false,
+        "error": null,
+        "from_timestamp": 1790755200,
+        "to_timestamp": 1792056600,
+        "diff": "--- 2026-09-30T08:00:00Z\n+++ 2026-10-15T09:30:00Z\n@@ -1 +1,2 @@\n 最新动态\n+星衡半导体否认推迟量产，8英寸产线按计划推进",
+        "truncated": false
+      }
+    ]
+  }
+}
