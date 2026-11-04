@@ -189,7 +189,7 @@ _TAG = re.compile(r"<[^>]+>")
 
 
 def strip_html(text: str) -> str:
-    text = re.sub(r"(?is)<(script|style|head|noscript)[^>]*>.*?</\1>", " ", text or "")
+    text = re.sub(r"(?is)<(script|style|head|noscript|title)[^>]*>.*?</\1>", " ", text or "")
     text = re.sub(r"(?i)<br\s*/?>|</p>|</div>|</li>|</h\d>|</tr>", "\n", text)
     text = html.unescape(_TAG.sub(" ", text))
     lines = [re.sub(r"[ \t　\xa0]+", " ", ln).strip() for ln in text.splitlines()]
@@ -433,18 +433,24 @@ class CollectorStore:
         fetch = fetch or (lambda url: http_get(url, allow_private=self.allow_private_urls))
         d = self._dir(task_id)
         started = now_iso()
-        with file_lock(d / ".collect-lock", timeout=2):
+        # A run can take minutes (sources x 20 s); only a lock older than an hour counts as abandoned.
+        with file_lock(d / ".collect-lock", timeout=2, stale=3600):
             existing = self.items(task_id)
             ids = {i.item_id for i in existing}
             fps = {i.fingerprint for i in existing}
             status = self.status(task_id)
             new: list[Item] = []
+            # Page snapshots are written only AFTER items.jsonl (consistency fix): if archiving fails,
+            # the old snapshot stays and the next run finds the same change again. If the process dies
+            # between the two writes, the next run rebuilds the same change item (same id, from the
+            # text hash) and dedup skips it - nothing is lost and nothing is archived twice.
+            pending_pages: list[tuple[Path, str]] = []
             per, dup_total, failed = {}, 0, 0
             for src in task.sources:
                 st = status.get(src.source_id, SourceStatus())
                 st.last_attempt = now_iso()
                 try:
-                    found, kind, via = self._fetch_source(task, src, fetch, cdio_client, d)
+                    found, kind, via = self._fetch_source(task, src, fetch, cdio_client, d, pending_pages)
                     st.detected_kind = kind
                     n_new = n_dup = 0
                     for it in found:
@@ -467,6 +473,8 @@ class CollectorStore:
                 f = d / "items.jsonl"
                 old = f.read_text(encoding="utf-8") if f.exists() else ""
                 atomic_write(f, old + "".join(i.model_dump_json() + "\n" for i in new))
+            for path, text in pending_pages:
+                atomic_write(path, text)
             atomic_write(d / "status.json", json.dumps({k: v.model_dump() for k, v in status.items()},
                                                        ensure_ascii=False, indent=2) + "\n")
         return CollectResult(task_id=task_id, started_at=started, new_items=len(new), duplicates=dup_total,
@@ -479,10 +487,11 @@ class CollectorStore:
                     fingerprint=_h(_norm(title), _norm(summary)),
                     keyword_hits=keyword_hits(task.keywords, title, summary), via=via)
 
-    def _fetch_source(self, task, src, fetch, cdio_client, d) -> tuple[list[Item], str, str]:
+    def _fetch_source(self, task, src, fetch, cdio_client, d, pending) -> tuple[list[Item], str, str]:
         if src.kind == "page" and cdio_client is not None:
             title, text = _cdio_page(cdio_client, src, task)
-            return self._page_items(task, src, title, text, d, via="changedetection.io"), "page", "changedetection.io"
+            return self._page_items(task, src, title, text, d, pending, via="changedetection.io"), "page", \
+                "changedetection.io"
         body, ctype = fetch(src.url)
         is_feed = src.kind == "feed" or (src.kind == "auto" and looks_like_feed(body))
         if is_feed:
@@ -490,14 +499,14 @@ class CollectorStore:
             return [self._item(task, src, "feed_entry", e["key"], e["title"], e["url"], e["published"], e["summary"])
                     for e in entries], "feed", "direct"
         title, text = page_text(body, ctype)
-        return self._page_items(task, src, title, text, d), "page", "direct"
+        return self._page_items(task, src, title, text, d, pending), "page", "direct"
 
-    def _page_items(self, task, src, title, text, d, via="direct") -> list[Item]:
+    def _page_items(self, task, src, title, text, d, pending, via="direct") -> list[Item]:
         snap = d / "pages" / f"{src.source_id}.txt"
         old = snap.read_text(encoding="utf-8") if snap.exists() else None
         if old == text:
             return []
-        atomic_write(snap, text)
+        pending.append((snap, text))           # written by collect() after the items are archived
         first = next(iter(text.splitlines()), "")[:80]
         name = title or src.name or first or src.url
         if old is None:

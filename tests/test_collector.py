@@ -202,3 +202,80 @@ def test_edit_task_keeps_source_ids(store, site):
     t = _task(store, site, "/rss")
     t2 = store.update_task(t.task_id, "AI 芯片行业动态", "Tenstorrent", "", f"{site.base}/rss 来源\n{site.base}/atom 新来源")
     assert t2.sources[0].source_id == t.sources[0].source_id and len(t2.sources) == 2
+
+
+# ---------------------------------------------------------------- consistency (final round, P0) -----
+
+def test_failed_archive_write_does_not_lose_a_page_change(store, site, monkeypatch):
+    """Counterexample: the page snapshot was written before items.jsonl. If the archive write failed,
+    the next collection compared against the NEW snapshot and the change was never archived."""
+    site.put("/page", "<html><title>公司新闻</title><body><p>旧消息</p></body></html>", "text/html")
+    t = _task(store, site, "/page")
+    store.collect(t.task_id)
+    site.put("/page", "<html><title>公司新闻</title><body><p>新：Blackhole 量产</p><p>旧消息</p></body></html>", "text/html")
+    real = C.atomic_write
+
+    def boom(path, text):
+        if path.name == "items.jsonl":
+            raise OSError("disk full")
+        return real(path, text)
+    monkeypatch.setattr(C, "atomic_write", boom)
+    with pytest.raises(OSError):
+        store.collect(t.task_id)
+    monkeypatch.setattr(C, "atomic_write", real)
+    assert [i.kind for i in store.items(t.task_id)] == ["page_snapshot"]       # nothing half-written
+    r = store.collect(t.task_id)                                                # retry
+    changes = [i for i in store.items(t.task_id) if i.kind == "page_change"]
+    assert r.new_items == 1 and changes and changes[0].summary == "新：Blackhole 量产"
+    assert store.collect(t.task_id).new_items == 0                               # and only once
+
+
+def test_failed_archive_write_does_not_lose_feed_entries(store, site, monkeypatch):
+    site.put("/rss", (FIX / "rss_v1.xml").read_bytes())
+    t = _task(store, site, "/rss")
+    real = C.atomic_write
+    monkeypatch.setattr(C, "atomic_write", lambda p, x: (_ for _ in ()).throw(OSError("disk full"))
+                        if p.name == "items.jsonl" else real(p, x))
+    with pytest.raises(OSError):
+        store.collect(t.task_id)
+    monkeypatch.setattr(C, "atomic_write", real)
+    assert store.collect(t.task_id).new_items == 2
+
+
+def test_crash_between_archive_and_snapshot_does_not_duplicate(store, site, monkeypatch):
+    """The other order of failure: items.jsonl written, then the snapshot write fails."""
+    site.put("/page", "<html><title>公司新闻</title><body><p>旧消息</p></body></html>", "text/html")
+    t = _task(store, site, "/page")
+    store.collect(t.task_id)
+    site.put("/page", "<html><title>公司新闻</title><body><p>新：Blackhole 量产</p><p>旧消息</p></body></html>", "text/html")
+    real = C.atomic_write
+
+    def boom(path, text):
+        if path.parent.name == "pages":
+            raise OSError("disk full")
+        return real(path, text)
+    monkeypatch.setattr(C, "atomic_write", boom)
+    with pytest.raises(OSError):
+        store.collect(t.task_id)
+    monkeypatch.setattr(C, "atomic_write", real)
+    assert [i.kind for i in store.items(t.task_id)].count("page_change") == 1     # archived once
+    r = store.collect(t.task_id)                                                  # recovers the snapshot
+    assert (r.new_items, r.duplicates) == (0, 1)
+    assert [i.kind for i in store.items(t.task_id)].count("page_change") == 1
+    assert store.collect(t.task_id).new_items == 0
+
+
+def test_a_long_running_collection_is_not_taken_over(store, site):
+    """A collection may legitimately run for minutes (many sources x 20 s timeout). A second run must
+    not treat its lock as stale after 120 s and collect concurrently."""
+    import os
+    import time
+    site.put("/rss", (FIX / "rss_v1.xml").read_bytes())
+    t = _task(store, site, "/rss")
+    lock = store._dir(t.task_id) / ".collect-lock"
+    lock.mkdir(parents=True)
+    old = time.time() - 300                     # a run that started 5 minutes ago is still going
+    os.utime(lock, (old, old))
+    with pytest.raises(C.ProjectError) as e:
+        store.collect(t.task_id)
+    assert "占用" in str(e.value) and store.items(t.task_id) == []
