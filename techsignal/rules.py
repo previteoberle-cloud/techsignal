@@ -44,7 +44,8 @@ class SignalHit:
 class RuleOutcome:
     kind: Literal["decisive", "unrelated", "ambiguous"]
     direction: Direction | None = None
-    assumption_id: str | None = None
+    assumption_id: str | None = None              # first of assumption_ids, kept for callers that want one
+    assumption_ids: list[str] = field(default_factory=list)  # every assumption the decisive signals hit
     signals: list[SignalHit] = field(default_factory=list)
     reasons: list[str] = field(default_factory=list)
 
@@ -100,10 +101,12 @@ def decide(match: ThesisMatch, t: TriageResult) -> RuleOutcome:
 
     polarities = {s.polarity for s in signals}
     if len(polarities) > 1:
+        # Conservative: no direction, but every signal is named so nothing is dropped silently.
         return RuleOutcome("ambiguous", signals=signals, reasons=[
-            "同一变化中同时出现支持与削弱信号，规则层不做方向判断"])
+            "同一变化中同时出现支持与削弱信号，规则层不做方向判断：" + "；".join(s.describe() for s in signals)])
 
     direction = Direction.SUPPORTS if polarities == {"support"} else Direction.WEAKENS
     assumption_ids = sorted({s.assumption_id for s in signals})
-    return RuleOutcome("decisive", direction, assumption_id=assumption_ids[0], signals=signals,
-                       reasons=[s.describe() for s in signals])
+    # One change can bear on several assumptions; callers must report each of them (R1.1).
+    return RuleOutcome("decisive", direction, assumption_id=assumption_ids[0], assumption_ids=assumption_ids,
+                       signals=signals, reasons=[s.describe() for s in signals])

@@ -17,6 +17,7 @@ from .models import (
     Thesis,
 )
 from .providers import LLMProvider
+from .rules import match_theses
 from .store import EvidenceLedger, SourceRegistry
 from .triage import build_evidence, clean_lines, fingerprint, pre_filter
 from .validate import assert_valid
@@ -56,7 +57,10 @@ class RunResult:
 
 def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
                  provider: LLMProvider | None = None, ledger: EvidenceLedger | None = None,
-                 validate: bool = True) -> RunResult:
+                 validate: bool = True, persist: bool = True) -> RunResult:
+    """Run the whole chain. The ledger is written only at the very end, after validation passed,
+    and only when persist=True and the ledger has a path. The CLI passes persist=False and commits
+    the ledger together with the other outputs (see cli._commit_outputs)."""
     meta, events = parse_changes_report(report)
     ledger = ledger if ledger is not None else EvidenceLedger()
     stats = AssessStats()
@@ -66,7 +70,7 @@ def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
     filtered: list[FilteredEvent] = []
     used_evidence: dict[str, Evidence] = {}
     assessments: list[Assessment] = []
-    seen: dict[str, Evidence] = {}
+    seen: dict[tuple, Evidence] = {}
 
     for event in events:
         f = pre_filter(event)
@@ -83,7 +87,12 @@ def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
 
         source = sources.profile(event.domain)
         fp = fingerprint(t)
-        earlier = seen.get(fp) or ledger.find_by_fingerprint(fp, exclude_event=event.event_id)
+        # Duplicate = same content about the same research subject. Matching first means identical
+        # wording on two different companies' pages is assessed twice, not merged (R1.1).
+        matches = match_theses(event.title, t, theses)
+        subject = sorted(m.thesis.thesis_id for m in matches)
+        earlier = (seen.get((fp, tuple(subject)))
+                   or ledger.find_duplicate(fp, subject, exclude_event=event.event_id))
         if earlier and _GRADE_RANK[source.grade] >= _GRADE_RANK[earlier.grade]:
             filtered.append(FilteredEvent(
                 event_id=event.event_id, watch_uuid=event.watch_uuid, title=event.title,
@@ -91,11 +100,11 @@ def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
                 reason_zh=f"内容与已记录证据一致，且来源等级（{source.grade.value}）不高于原证据（{earlier.grade.value}）"))
             continue
 
-        ev = build_evidence(event, t, source)
+        ev = build_evidence(event, t, source, subject_key=subject)
         ledger.add(ev)
-        seen[fp] = ev
+        seen[(fp, tuple(subject))] = ev
         used_evidence[ev.evidence_id] = ev
-        assessments.extend(assess_event(event, t, ev, theses, provider, stats))
+        assessments.extend(assess_event(event, t, ev, theses, provider, stats, matches=matches))
 
     assessments = resolve_conflicts(assessments, used_evidence, stats)
     assessments = [recommend(a) for a in assessments]
@@ -106,6 +115,8 @@ def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
     md = render_markdown(brief)
     if validate:
         assert_valid(brief, md, ledger.ids(), {t.thesis_id for t in theses})
+    if persist and ledger.path:
+        ledger.save()
 
     return RunResult(meta=meta, events=events, filtered=filtered, evidence=used_evidence,
                      assessments=assessments, brief=brief, markdown=md, stats=stats,

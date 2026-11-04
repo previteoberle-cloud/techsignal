@@ -45,9 +45,10 @@ def _cap(conf: str, ceiling: str) -> str:
     return _CONF_ORDER[min(_CONF_ORDER.index(conf), _CONF_ORDER.index(ceiling))]
 
 
-def _new(event: ChangeEvent, thesis: Thesis | None, evidence: Evidence, **kw) -> Assessment:
+def _new(event: ChangeEvent, thesis: Thesis | None, evidence: Evidence, id_suffix: str = "", **kw) -> Assessment:
+    parts = [event.event_id, thesis.thesis_id if thesis else "none"] + ([id_suffix] if id_suffix else [])
     return Assessment(
-        assessment_id="AS-" + short_hash(event.event_id, thesis.thesis_id if thesis else "none"),
+        assessment_id="AS-" + short_hash(*parts),
         event_id=event.event_id,
         thesis_id=thesis.thesis_id if thesis else None,
         evidence_ids=[evidence.evidence_id],
@@ -146,8 +147,10 @@ def _apply_gates(a: Assessment, event: ChangeEvent, evidence: Evidence, stats: A
 
 
 def assess_event(event: ChangeEvent, t: TriageResult, evidence: Evidence, theses: list[Thesis],
-                 provider: LLMProvider | None, stats: AssessStats) -> list[Assessment]:
-    matches = rules.match_theses(event.title, t, theses)
+                 provider: LLMProvider | None, stats: AssessStats,
+                 matches: list | None = None) -> list[Assessment]:
+    if matches is None:
+        matches = rules.match_theses(event.title, t, theses)
     if not matches:
         stats.rule_decisions += 1
         return [_new(event, None, evidence, direction=Direction.UNRELATED, basis=Basis.RULE,
@@ -161,11 +164,22 @@ def assess_event(event: ChangeEvent, t: TriageResult, evidence: Evidence, theses
             a = _new(event, match.thesis, evidence, direction=Direction.UNRELATED, basis=Basis.RULE,
                      rationale=outcome.reasons, confidence="medium")
         elif outcome.kind == "decisive":
-            stats.rule_decisions += 1
-            a = _new(event, match.thesis, evidence, direction=outcome.direction, basis=Basis.RULE,
-                     assumption_id=outcome.assumption_id, rationale=outcome.reasons,
-                     matched_signals=[s.describe() for s in outcome.signals],
-                     confidence="high" if evidence.grade.value == "A" else "medium")
+            # One assessment per hit assumption, each with only its own signals, so attribution is
+            # explicit and conflict handling sees every assumption (R1.1). A single hit keeps the
+            # R1 assessment id.
+            multi = len(outcome.assumption_ids) > 1
+            for aid in outcome.assumption_ids:
+                stats.rule_decisions += 1
+                own = [s for s in outcome.signals if s.assumption_id == aid]
+                a = _new(event, match.thesis, evidence, id_suffix=aid if multi else "",
+                         direction=outcome.direction, basis=Basis.RULE, assumption_id=aid,
+                         rationale=[s.describe() for s in own]
+                         + ([f"同一变化还命中假设 {', '.join(x for x in outcome.assumption_ids if x != aid)}，已分别评估"]
+                            if multi else []),
+                         matched_signals=[s.describe() for s in own],
+                         confidence="high" if evidence.grade.value == "A" else "medium")
+                out.append(_apply_gates(a, event, evidence, stats))
+            continue
         else:
             a = _from_model(event, t, evidence, match, outcome, provider, stats)
         out.append(_apply_gates(a, event, evidence, stats))

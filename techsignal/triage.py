@@ -84,7 +84,8 @@ def pre_filter(event: ChangeEvent) -> FilteredEvent | None:
     return None
 
 
-def build_evidence(event: ChangeEvent, t: TriageResult, source: SourceProfile) -> Evidence:
+def build_evidence(event: ChangeEvent, t: TriageResult, source: SourceProfile,
+                   subject_key: list[str] | None = None) -> Evidence:
     fp = fingerprint(t)
     return Evidence(
         evidence_id="EV-" + short_hash(event.event_id, fp),
@@ -99,6 +100,7 @@ def build_evidence(event: ChangeEvent, t: TriageResult, source: SourceProfile) -
         excerpt_added=t.meaningful_added,
         excerpt_removed=t.meaningful_removed,
         content_fingerprint=fp,
+        subject_key=sorted(subject_key or []),
         truncated=event.truncated,
         cdio_watch_uuid=event.watch_uuid,
         cdio_history_path=event.cdio_history_path,

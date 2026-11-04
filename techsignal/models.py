@@ -167,6 +167,9 @@ class Evidence(_Strict):
     excerpt_added: list[str]
     excerpt_removed: list[str]
     content_fingerprint: str
+    # Research subjects the content was matched to (sorted thesis ids). Part of the duplicate key so
+    # identical wording about two different companies is never merged. [] = matched no thesis.
+    subject_key: list[str] = Field(default_factory=list)
     truncated: bool
     cdio_watch_uuid: str
     cdio_history_path: str

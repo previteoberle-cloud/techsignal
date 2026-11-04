@@ -9,13 +9,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 from .models import Brief, canonical_json
 from .providers import MockReplayProvider, OpenAICompatibleProvider
-from .store import EvidenceLedger, SourceRegistry, StoreError, load_theses
-from .validate import CitationError, validate_brief, validate_markdown
+from .store import EvidenceLedger, SourceRegistry, load_theses
+from .validate import validate_brief, validate_markdown
 
 
 def _provider(args):
@@ -28,27 +31,51 @@ def _provider(args):
     return OpenAICompatibleProvider.from_env()
 
 
+# Order matters only if the process dies between two os.replace() calls: the ledger lands first and
+# the human-facing brief.md last, so a brief is never newer than the evidence it cites.
+COMMIT_ORDER = ("evidence.jsonl", "decision_log.json", "brief.json", "brief.md")
+
+
+def _commit_outputs(out: Path, files: dict[str, str]) -> None:
+    """Write every output to a staging directory inside `out`, then move each into place.
+
+    Any failure before the moves (bad input, validation, provider crash, a write error while
+    staging) leaves the previous outputs exactly as they were. The moves themselves are atomic per
+    file (os.replace on the same filesystem); the set of four is not atomic as a group.
+    """
+    out.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=".techsignal-staging-", dir=out))
+    try:
+        for name in COMMIT_ORDER:
+            (staging / name).write_text(files[name], encoding="utf-8")
+        for name in COMMIT_ORDER:
+            os.replace(staging / name, out / name)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+
+
 def cmd_run(args) -> int:
-    from .adapters.cdio import AdapterError
     from .pipeline import run_pipeline
 
     out = Path(args.out)
-    out.mkdir(parents=True, exist_ok=True)
-    ledger_path = out / "evidence.jsonl"
-    if ledger_path.exists() and not args.append_ledger:
-        ledger_path.unlink()  # fresh ledger -> reproducible output
     try:
+        # Nothing under `out` is touched until the run has fully succeeded. Without --append-ledger
+        # the ledger simply starts empty in memory; the old file is replaced only at commit time.
+        ledger = EvidenceLedger(out / "evidence.jsonl" if args.append_ledger else None)
         result = run_pipeline(
             Path(args.changes).read_text(encoding="utf-8"),
             load_theses(Path(args.theses)), SourceRegistry.load(Path(args.sources)),
-            provider=_provider(args), ledger=EvidenceLedger(ledger_path))
-    except (AdapterError, StoreError, CitationError) as e:
-        print(f"失败：{e}", file=sys.stderr)
+            provider=_provider(args), ledger=ledger, persist=False)
+        _commit_outputs(out, {
+            "evidence.jsonl": ledger.serialize(),
+            "decision_log.json": canonical_json(result.decision_log()) + "\n",
+            "brief.json": canonical_json(result.brief.model_dump(mode="json")) + "\n",
+            "brief.md": result.markdown,
+        })
+    except Exception as e:  # noqa: BLE001 - CLI boundary: report, exit non-zero, outputs untouched
+        print(f"失败（{type(e).__name__}）：{e}；已有输出未改动", file=sys.stderr)
         return 2
 
-    (out / "brief.md").write_text(result.markdown, encoding="utf-8")
-    (out / "brief.json").write_text(canonical_json(result.brief.model_dump(mode="json")) + "\n", encoding="utf-8")
-    (out / "decision_log.json").write_text(canonical_json(result.decision_log()) + "\n", encoding="utf-8")
     s = result.brief.stats
     print(f"变化事件 {s['events_total']}，过滤 {s['events_filtered']}，评估 {s['assessments']}"
           f"（支持 {s['supports']} / 削弱 {s['weakens']} / 证据不足 {s['insufficient']} / 无关 {s['unrelated']}）")

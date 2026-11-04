@@ -121,3 +121,101 @@ All checks passed!
 - 规则可能漏判：开发中实际遇到「取消……订单」超出 12 字匹配窗口，已放宽到 20 字。手写规则需要随样本持续维护。
 - 评测指标是自测性质：场景和预期都由开发者编写，100% 只说明实现与设计意图一致。
 - 端到端的「金标准」输出是由同一份代码生成后人工审阅提交的，主要防回归，不是独立的标准答案。
+
+---
+
+# R1.1 定向补修与回归验收（2026-11-04）
+
+范围：只处理 Owner 复核提出的三个代码风险和 CI 失败归因，不扩大产品范围，不进入 R2。
+
+**方法：先写反例测试，再修复。** 新增测试先在**未修改的 R1 代码**上运行（从 `git archive HEAD` 导出的副本，套上新测试）：**14 failed, 74 passed, 2 skipped**。这 2 个跳过是因为副本旁边没有上游文件。14 个失败全部是真实复现，原因逐条核对过，见下表。修复后：**90 passed**。
+
+两处测试自身的错误，修正前不算复现：
+- 一个「保留原有行为」的测试把 cdio 按新到旧排列的转载顺序弄反了。
+- 一个模型异常测试在 `--append-ledger` 模式下内容被正确去重，注入的错误根本没触发。改为默认模式后，才在旧代码上真实复现。
+
+## 风险 1（P0）：跨企业误去重 —— 已复现，已修复
+
+| | 内容 |
+|---|---|
+| 反例 | S21：星衡半导体官网与澜芯光电官网发布完全相同的一句「公司宣布新产品送样与量产计划推迟至2027年」 |
+| 旧代码结果 | 澜芯事件被判为「重复」并丢弃，TH-002 的「削弱」信号丢失；跨批次（上一次的台账）同样丢失 |
+| 原因 | 去重键只有内容指纹 |
+| 修复 | 去重键改为「内容指纹 + 研究对象（命中的 thesis 编号，排序后）」。`Evidence` 新增 `subject_key` 字段，`EvidenceLedger.find_duplicate(fp, subject_key, …)` 替换 `find_by_fingerprint`。thesis 匹配提前到去重之前执行 |
+| 保留的行为 | S07（同一研究对象，C 级转载 A 级原文）仍去重；S08（论坛先发、官方后证实）高等级来源仍不被丢弃；新增跨批次转载去重测试 |
+| 测试 | S21、`test_same_text_two_companies_same_run`、`…_across_runs`、`test_same_subject_repost_still_deduplicated_across_runs` |
+
+## 风险 2（P0）：失败时破坏已有结果 —— 已复现，已修复
+
+旧代码的问题有三：
+- CLI 在运行**之前**就删除已有的 `evidence.jsonl`（默认模式）。
+- `EvidenceLedger.add()` 每加一条就**立即追加写盘**，早于引用校验。
+- 四个输出文件直接覆盖写入；非预期异常（如模型层抛 `RuntimeError`）不被捕获，直接崩溃。
+
+| 注入的失败 | 旧代码结果 | 修复后 |
+|---|---|---|
+| 非法 JSON 输入（默认模式） | 上次的台账被删除，与 brief.md 不再对应 | 四个文件逐字节不变，退出码 2 |
+| 非法 JSON 输入（追加模式） | 未损坏（适配器在写盘前失败） | 不变 |
+| 引用校验失败（追加模式） | 新证据已追加进台账 | 不变 |
+| 模型层非预期异常 | 未捕获并崩溃；台账已被删除 | 不变，退出码 2 |
+| 写 decision_log.json 时磁盘错误 | 未捕获；brief.md 和 brief.json 已被新内容覆盖 | 不变，无临时目录残留 |
+| 成功 → 失败 → 成功 | 中间一步删除台账 | 最终输出与已提交的金标准逐字节一致 |
+| 库调用 `run_pipeline` 校验失败 | 台账已追加 | 台账文件不变 |
+
+修复内容：
+- `EvidenceLedger.add()` 只在内存中缓冲；`save()` 先写同目录临时文件，fsync 后 `os.replace`，原有行逐字节保留。
+- `run_pipeline` 只在校验通过后保存（`persist=True` 且台账有路径时）。
+- CLI 用 `persist=False`：四个文件先写入 `out/.techsignal-staging-*`，全部写好后按「台账 → decision_log → brief.json → brief.md」顺序逐个 `os.replace`，`finally` 中清理暂存目录。
+- CLI 边界捕获所有异常，打印类型和信息，返回 2。
+
+**剩余风险：** 单个文件的替换是原子的，四个文件作为一组不是。如果进程恰好在两次 `os.replace` 之间被强制终止，可能出现新旧混合；按上述顺序，最坏情况是台账比 brief 新，不会出现 brief 引用台账里不存在的证据。没有实现目录级原子切换。
+
+## 风险 3（P1）：多假设命中只取第一个 —— 已复现，已修复
+
+| | 内容 |
+|---|---|
+| 反例一 | S22：「良率突破65%，产线如期推进」同时命中 A1（如期）和 A2（良率突破） |
+| 旧代码结果 | 只产生 A1 一条评估，A2 被静默丢弃 |
+| 反例二 | S23：上述官方消息，加上 B 级媒体「良率低于预期」（A2 削弱） |
+| 旧代码结果 | 由于 A2 没有被记录，**冲突检测失效**，媒体那条被判为确定性「削弱」（错误结论） |
+| 修复 | `RuleOutcome` 新增 `assumption_ids`；同方向命中多个假设时，**每个假设单独生成一条评估**，只带自己的信号，并注明「同一变化还命中假设 …，已分别评估」。单假设评估的 ID 与 R1 相同；多假设时 ID 加上假设编号 |
+| 保守策略 | 同一变化中支持与削弱并存时，仍不判方向（R1 原测试保持不变），但理由中逐条列出全部信号，不再静默 |
+| 测试 | S22、S23、`test_every_hit_assumption_is_reported`、`test_conflict_on_secondary_assumption` |
+
+**剩余风险：** 模型层（Mock 或真实 Provider）一次只返回一个 `assumption_id`。规则层判定不了、交给模型的情况下，多假设归因仍可能不完整。这需要在 R2 改为多假设输出格式。
+
+## 变异检验（修复后）
+
+| 撤销的修复 | 结果 |
+|---|---|
+| 去重不看研究对象 | 4 failed |
+| 台账在校验前写盘 | 1 failed |
+| CLI 不经暂存直接写 | 1 failed |
+| 多假设只取第一个 | 5 failed |
+
+## 回归结果
+
+| 检查 | 结果 |
+|---|---|
+| `python -m pytest` | **90 passed**。原 75 个测试的文件与场景数据**未做任何修改**，全部通过 |
+| `python -m techsignal eval` | 23/23 场景通过；规则直接判定占 0.783，模型层调用率 0.13 |
+| `python -m techsignal.fixtures --check` | 通过 |
+| ruff 阻断级规则 | 通过；不阻断的仍只有 1 条 C901 |
+| 演示输出 | 只有 `evidence.jsonl` 变化（新增 `subject_key` 字段）；`brief.md`、`brief.json`、`decision_log.json` 逐字节不变 |
+| 上游核心 | `git diff origin/master -- changedetectionio/` 为 0 行 |
+
+测试框架有一处必要改动：`evaluation.check_scenario` 在预期中写了 `assumption_id` 时按假设匹配，因为一条变化现在可能对应多条评估。原有场景的预期都没有改。
+
+## CI 失败归因（基于 GitHub Actions 实际日志，提交 2b45aa2）
+
+TechSignal 自己的 workflow：push 和 PR 两次运行都成功。上游 workflow 中的失败如下：
+
+| 失败的 job | 日志证据 | 归因 |
+|---|---|---|
+| App Test · 3.11 build：「THIRD-PARTY-LICENSES.md is up to date」 | 差异：`-distro`，`+httpcore2`、`+httpx2`、`+truststore`，`openai` 的许可证字符串从 `Apache Software License` 变为 `Apache-2.0` | **上游基线 / 依赖漂移。** 镜像只 COPY `requirements.txt`、`changedetectionio/`、`docs/api-spec.yaml`，不包含 `techsignal/`；`requirements.txt` 没有改动；差异都是 openai/litellm 链路上未锁定的传递依赖新版本。该失败使 3.11 的后续 job 全部被跳过 |
+| App Test · 3.14 unit-tests：`test_llm_features_enabled_by_default` | `tests/llm/test_llm_features_disabled.py:99`，断言 `href="/settings/ai/mcp"` 失败 | **上游基线。** 基线提交 `5e086dd`（上游 dgtlmoon）把 `settings-ai-tabs.html` 的链接改成带 `#overview`，测试没有同步更新 |
+| App Test · 3.14 basic-tests：`test_mcp_settings_page`、`test_ai_pages_settings_tab_row` | 断言 `<a href="/settings/ai/mcp" class=…>` 和 `/settings/ai/llm` 失败（782 passed / 2 failed） | **上游基线**，原因同上（`5e086dd`）。日志中大量 `browser-chrome` 域名解析错误来自不依赖浏览器的测试的日志输出，不是失败原因 |
+| App Test · 3.14 upgrade-path-test | `error: pathspec '0.49.1' did not match any file(s) known to git` | **Fork / CI 环境。** 本 Fork 没有任何 tag（`git ls-remote --tags origin` 为 0 行），升级路径测试依赖上游的 tag |
+| Container Build（PR 事件）· linux/arm/v7 | `Failed to fetch: https://www.piwheels.org/…/pillow-13.0.0-cp311-cp311-linux_armv7l.whl … connection closed before message completed`；其余 ARM job 随之取消 | **外部网络。** 同一提交在 push 事件下的 Container Build 运行成功 |
+
+TechSignal 引入的问题：**未发现**。没有修改任何上游代码或 workflow，也没有为了让 CI 变绿而屏蔽或跳过任何检查。说明：上述「上游基线」的结论依据的是日志和提交内容。我没有在 Fork 的 master 上单独运行一次上游 CI 作为对照，因为 Fork 的 master 没有 CI 运行记录。

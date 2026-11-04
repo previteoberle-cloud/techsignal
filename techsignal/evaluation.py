@@ -80,9 +80,11 @@ def check_scenario(sc: dict, result: RunResult | None, error: Exception | None) 
             continue
         got = result.by_watch(uuid)
         for e in expected_list:
-            a = next((x for x in got if x.thesis_id == e["thesis_id"]), None)
+            # match on assumption too when the expectation names one (an event can hit several)
+            a = next((x for x in got if x.thesis_id == e["thesis_id"]
+                      and ("assumption_id" not in e or x.assumption_id == e["assumption_id"])), None)
             if a is None:
-                failures.append(f"{uuid}: 没有针对 {e['thesis_id']} 的评估")
+                failures.append(f"{uuid}: 没有针对 {e['thesis_id']}·{e.get('assumption_id', '*')} 的评估")
                 continue
             problems = _check_assessment(a, e)
             if a.direction.value == e["direction"]:
