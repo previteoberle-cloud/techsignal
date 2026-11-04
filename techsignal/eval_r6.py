@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CASES = ROOT / "eval" / "r6_cases.json"
 DIRS = ("supports", "weakens", "insufficient", "unrelated")
 BLOCKED = "BLOCKED：未提供已授权的模型服务"
+BEFORE = ROOT / "eval" / "r6_results_before_r61.json"
 
 
 class ProtocolStub(OpenAICompatibleProvider):
@@ -71,6 +72,14 @@ def build_project(defn: dict, key: str) -> tuple[list, SourceRegistry]:
         urls="\n".join(f"{s['url']} {s.get('label', '')}".strip() for s in defn["sources"]),
         source_types={s["url"]: s.get("type", "official") for s in defn["sources"]}, owner="评测集")
     spec = P.check_spec(spec, ready=True)
+    # R6.1: a source reaches the grade of its type only when confirmed. The eval-set sources are
+    # fictional and their identities known by construction; "confirmed": true says so.
+    confirmed = {P.check_public_url(s["url"]): s for s in defn["sources"] if s.get("confirmed")}
+    spec = spec.model_copy(update={"sources": [
+        x.model_copy(update={"confirmation": P.SourceConfirmation(
+            confirmed_type=x.source_type, by="评测集作者", at="2026-11-01T00:00:00Z",
+            basis="评测集设定：虚构来源，身份按构造已知")}) if x.url in confirmed else x
+        for x in spec.sources]})
     proj = P.Project(project_id="p-" + (key.encode().hex() + "0" * 12)[:12], status="ready", version=1,
                      created_at="2026-11-01T00:00:00Z", updated_at="2026-11-01T00:00:00Z", spec=spec)
     thesis = P.build_thesis(proj).model_copy(update={"fictional": True})
@@ -146,7 +155,7 @@ def evaluate(cases_path: Path = CASES) -> dict:
     results = []
     for n, case in enumerate(data["cases"], 1):
         entry = {"id": case["id"], "category": case["category"], "title": case["title"],
-                 "stub_purpose": case["protocol_stub"]["purpose"]}
+                 "stub_purpose": case["protocol_stub"]["purpose"], "added_in": case.get("added_in", "R6")}
         for s in systems:
             entry[s] = run_case(case, n, data["projects"], s)
         if blocked:
@@ -171,46 +180,74 @@ SCORE_ZH = {"correct": "✅ 一致", "conservative": "🟡 保守（交人工）
 CAT_ZH = {"multi_assumption": "多假设命中", "paraphrase": "同义改写", "negation": "否定表达",
           "deletion_restructure": "删除与文档重构", "entity_ambiguity": "公司名称歧义", "source_conflict": "来源冲突",
           "low_credibility": "低可信来源", "unrelated": "无关变化", "model_bad_citation": "模型引用不存在的证据",
-          "model_format_error": "模型格式错误", "prompt_injection": "页面提示注入"}
+          "model_format_error": "模型格式错误", "prompt_injection": "页面提示注入", "unconfirmed_source": "未确认来源"}
 
 
-def to_markdown(rep: dict) -> str:
+def _counts(results: list[dict], system: str, ids: set[str] | None = None) -> dict:
+    c = {"labelled_pairs": 0, "correct": 0, "conservative": 0, "missed": 0, "wrong_direction": 0}
+    for r in results:
+        if ids is not None and r["id"] not in ids:
+            continue
+        for row in r[system]["rows"].values():
+            c["labelled_pairs"] += 1
+            c[row["score"]] += 1
+    return c
+
+
+def _cell(row: dict) -> str:
+    return f"{ZH[row['got']]} {SCORE_ZH[row['score']]}"
+
+
+def to_markdown(rep: dict, before: dict | None = None) -> str:
     s = rep["summary"]
+    r6_ids = {r["id"] for r in rep["results"] if r.get("added_in", "R6") == "R6"}
     lines = [
-        "# TechSignal R6 评测结果（自动生成）", "",
+        "# TechSignal R6 / R6.1 评测结果（自动生成）", "",
         "由 `python -m techsignal.eval_r6 --md docs/R6_EVAL.md` 生成，请勿手工修改数字。",
-        "", "- 评测集：`eval/r6_cases.json`，"
-        f"{rep['cases']} 个虚构案例，覆盖 {len(rep['categories'])} 类情形。人工标注由本项目编写，代表研究员的预期判断。",
+        "", f"- 评测集：`eval/r6_cases.json`，{rep['cases']} 个虚构案例（R6 原有 {len(r6_ids)} 个，R6.1 新增 "
+        f"{rep['cases'] - len(r6_ids)} 个），覆盖 {len(rep['categories'])} 类情形。人工标注由本项目编写，代表研究员的预期判断。",
+        "- **整改前**：用 R6 的代码（提交 `7a5b2ea`）在同一份案例文件上运行的结果，保存在 `eval/r6_results_before_r61.json`。"
+        "**整改后**：当前代码。两者都保留，不只展示改善。",
         "- **规则层**：确定性规则，不使用模型。", "- **协议桩**：每个案例预置一条回答，走真实的 OpenAI 兼容解析路径并标注为 Mock，"
         "用来检验校验、门槛与降级逻辑；**它不代表任何模型的能力**，不能当作模型准确率。",
         f"- **真实模型**：{s['real_model'].get('status', '已运行')}" if "status" in s.get("real_model", {})
         else "- **真实模型**：已调用运营方配置并授权的模型服务。", "",
         "## 汇总（按「案例 × 假设」计）", "",
-        "| 系统 | 标注数 | 一致 | 保守（交人工） | 漏判 | 方向错误 | 模型调用次数 |", "|---|---|---|---|---|---|---|"]
+        "| 范围 | 系统 | 版本 | 标注数 | 一致 | 保守（交人工） | 漏判 | 方向错误 |", "|---|---|---|---|---|---|---|---|"]
     names = {"rule": "规则层", "stub": "协议桩（Mock）", "real_model": "真实模型"}
-    for k in ("rule", "stub", "real_model"):
-        v = s.get(k)
-        if not v:
-            continue
-        if "status" in v:
-            lines.append(f"| {names[k]} | — | — | — | — | — | {v['status']} |")
-        else:
-            lines.append(f"| {names[k]} | {v['labelled_pairs']} | {v['correct']} | {v['conservative']} | {v['missed']} | "
-                         f"{v['wrong_direction']} | {v['model_calls']} |")
+    for scope, ids in ((f"R6 原有 {len(r6_ids)} 例", r6_ids), (f"全部 {rep['cases']} 例", None)):
+        for k in ("rule", "stub"):
+            for label, src in (("整改前（R6）", before), ("整改后（R6.1）", rep)):
+                if src is None:
+                    continue
+                c = _counts(src["results"], k, ids)
+                lines.append(f"| {scope} | {names[k]} | {label} | {c['labelled_pairs']} | {c['correct']} | "
+                             f"{c['conservative']} | {c['missed']} | {c['wrong_direction']} |")
+    if "status" in s.get("real_model", {}):
+        lines.append(f"| 全部 | 真实模型 | — | — | — | — | — | {s['real_model']['status']} |")
     lines += ["", "「保守」指系统给出「待核实」交由人工判断：安全，但没有给出研究员期望的方向。「方向错误」是需要重视的错误。", "",
-              "## 逐案例", "", "| 案例 | 类别 | 假设 | 人工标注 | 规则层 | 协议桩（Mock） | 真实模型 |", "|---|---|---|---|---|---|---|"]
+              "## 逐案例", "",
+              "| 案例 | 类别 | 假设 | 人工标注 | 规则层 整改前 | 规则层 整改后 | 协议桩 整改前 | 协议桩 整改后 | 真实模型 |",
+              "|---|---|---|---|---|---|---|---|---|"]
+    old = {r["id"]: r for r in (before or {}).get("results", [])}
     for r in rep["results"]:
         for aid, row in r["rule"]["rows"].items():
             st = r["stub"]["rows"][aid]
+            o = old.get(r["id"])
             rm = r["real_model"]
-            real = "BLOCKED" if rm.get("status") == "BLOCKED" else \
-                f"{ZH[rm['rows'][aid]['got']]} {SCORE_ZH[rm['rows'][aid]['score']]}"
+            real = "BLOCKED" if rm.get("status") == "BLOCKED" else _cell(rm["rows"][aid])
             stub_note = "（未调用模型）" if r["stub"]["model_calls"] == 0 else ""
-            lines.append(f"| {r['id']} {r['title']} | {CAT_ZH.get(r['category'], r['category'])} | {aid} | {ZH[row['human']]} | "
-                         f"{ZH[row['got']]} {SCORE_ZH[row['score']]} | {ZH[st['got']]} {SCORE_ZH[st['score']]}{stub_note} | {real} |")
+            tag = "（R6.1 新增）" if r.get("added_in") == "R6.1" else ""
+            lines.append(f"| {r['id']} {r['title']}{tag} | {CAT_ZH.get(r['category'], r['category'])} | {aid} | {ZH[row['human']]} | "
+                         f"{_cell(o['rule']['rows'][aid]) if o else '—'} | {_cell(row)} | "
+                         f"{_cell(o['stub']['rows'][aid]) if o else '—'} | {_cell(st)}{stub_note} | {real} |")
     lines += ["", "## 协议桩每个案例检验的内容", ""]
     lines += [f"- {r['id']}：{r['stub_purpose']}" for r in rep["results"]]
     return "\n".join(lines) + "\n"
+
+
+def load_before() -> dict | None:
+    return json.loads(BEFORE.read_text(encoding="utf-8")) if BEFORE.exists() else None
 
 
 def main(argv=None) -> int:
@@ -223,7 +260,7 @@ def main(argv=None) -> int:
     if a.json:
         Path(a.json).write_text(json.dumps(rep, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if a.md:
-        Path(a.md).write_text(to_markdown(rep), encoding="utf-8")
+        Path(a.md).write_text(to_markdown(rep, load_before()), encoding="utf-8")
     print(json.dumps(rep["summary"], ensure_ascii=False, indent=2))
     return 0
 

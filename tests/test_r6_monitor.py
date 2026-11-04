@@ -21,7 +21,7 @@ def _spec(name="Tenstorrent", urls=f"{PAGE} 官方仓库\n{NEWS} 行业媒体"):
     return P.spec_from_form(
         name=name, question="Blackhole 的大模型推理软件成熟度", judgement="仍处早期，没有 70B 级模型的官方记录。",
         assumptions=[{"statement": "尚无 70B 级模型在 Blackhole 上的官方运行记录", "support": "8B", "weaken": "70B"}],
-        urls=urls, source_types={NEWS: "media"}, keywords="Blackhole")
+        urls=urls, source_types={PAGE: "official", NEWS: "media"}, keywords="Blackhole")
 
 
 @pytest.fixture()
@@ -42,8 +42,12 @@ def _client(cdio, key=KEY):
     return M.client_for(cdio.url, key)
 
 
-def _linked(store, cdio, name="Tenstorrent", **kw):
+def _linked(store, cdio, name="Tenstorrent", confirm=True, **kw):
+    """Create, (R6.1) confirm the official page as a person would, and link the watches."""
     p = store.create(_spec(name, **kw), ready=True)
+    if confirm and any(s.url == PAGE for s in p.spec.sources):
+        p = store.confirm_source(p.project_id, PAGE, "official", by="测试研究员",
+                                 basis="仓库属于 Tenstorrent 官方 GitHub 组织", expected_version=p.version)
     c = _client(cdio)
     plan = M.plan_watches(p, M.load_state(store, p.project_id), M.connect(c)["watches"])
     M.apply_plan(store, p.project_id, c, plan, confirmed=True)
@@ -155,7 +159,7 @@ def test_baseline_then_no_change_then_real_change(cdio, store):
     r3 = M.check_now(store, p.project_id, c)
     assert r3.outcome == "assessed" and r3.run_id
     refs = M.runs(store, p.project_id)
-    assert [r.run_id for r in refs] == [r3.run_id] and refs[0].thesis_version == 1
+    assert [r.run_id for r in refs] == [r3.run_id] and refs[0].thesis_version == 2      # v2 = source confirmed
     d = M.run_dir(store, p.project_id, r3.run_id)
     run = vm.load_run(d, d / "theses.json")
     rows = [(a["assumption_id"], a["direction"], a["basis"]) for a in run.assessments()]
@@ -234,12 +238,13 @@ def test_edits_after_a_run_do_not_rewrite_that_run(cdio, store):
     cdio.pages[PAGE] = V2
     first = M.check_now(store, p.project_id, c)
     store.update(p.project_id, _spec().model_copy(update={"judgement": "已出现 70B 记录，判断改为复核中"}),
-                 expected_version=1, ready=True)
+                 expected_version=2, ready=True)
     d = M.run_dir(store, p.project_id, first.run_id)
     assert vm.load_run(d, d / "theses.json").theses[0].conclusion == "仍处早期，没有 70B 级模型的官方记录。"
     cdio.pages[PAGE] = V2 + "| Llama 3.3 70B | Galaxy (Blackhole) | 30 t/s |\n"
     second = M.check_now(store, p.project_id, c)
-    assert second.outcome == "assessed" and M.runs(store, p.project_id)[-1].thesis_version == 2
+    assert second.outcome == "assessed" and M.runs(store, p.project_id)[-1].thesis_version == 3
+    assert store.get(p.project_id).spec.sources[0].confirmation is not None     # the edit kept the confirmation
 
 
 def test_concurrent_checks_of_one_project_are_serialized(cdio, store):
@@ -349,3 +354,30 @@ def test_waits_for_the_snapshot_not_for_the_start_of_the_check(store):
         assert r.outcome == "assessed", r.message
     finally:
         cdio.close()
+
+
+def test_r61_unconfirmed_source_gives_no_direction_in_a_project_run(cdio, store):
+    """The same real change as above, but nobody confirmed the source: grade C, insufficient."""
+    p, c = _linked(store, cdio, confirm=False)
+    M.check_now(store, p.project_id, c)
+    cdio.pages[PAGE] = V2
+    r = M.check_now(store, p.project_id, c)
+    d = M.run_dir(store, p.project_id, r.run_id)
+    run = vm.load_run(d, d / "theses.json")
+    a = run.assessments()[0]
+    assert (a["direction"], a["tentative_direction"]) == ("insufficient", "weakens")
+    ev = run.evidence[a["evidence_ids"][0]]
+    assert ev.grade == "C" and "未确认来源" in ev.source_name
+
+
+def test_r61_check_regenerates_inputs_of_an_r6_project(cdio, store):
+    """sources.json written by R6 (declared official -> A) is regenerated before the check, logged."""
+    p, c = _linked(store, cdio, confirm=False)
+    d = store.project_dir(p.project_id)
+    src = json.loads((d / "sources.json").read_text(encoding="utf-8"))
+    for x in src["sources"]:
+        x["grade"] = "A"
+    (d / "sources.json").write_text(json.dumps(src, ensure_ascii=False), encoding="utf-8")
+    M.check_now(store, p.project_id, c)
+    assert all(x["grade"] != "A" for x in json.loads((d / "sources.json").read_text(encoding="utf-8"))["sources"])
+    assert "A → C" in (d / "migrations.jsonl").read_text(encoding="utf-8")

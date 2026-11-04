@@ -53,6 +53,14 @@ def test_create_read_and_generated_inputs_validate(store):
     assert th.entities == ["Tenstorrent", "TT-Metal"] and th.topic_keywords == ["Blackhole", "LLM"]
     assert [a.assumption_id for a in th.assumptions] == ["A1", "A2"]
     reg = SourceRegistry.load(store.sources_path(p.project_id))
+    # R6.1: the form default is 未分类 (D); a declared type is a claim, so declared media stays at C
+    assert reg.profile("github.com", "https://github.com/tenstorrent/tt-metal").grade == "D"
+    assert reg.profile("news.example.com", "https://news.example.com/ai").grade == "C"
+    p = store.confirm_source(p.project_id, "https://github.com/tenstorrent/tt-metal", "official", by="研究员",
+                             basis="Tenstorrent 官方 GitHub 组织", expected_version=1)
+    p = store.confirm_source(p.project_id, "https://news.example.com/ai", "media", by="研究员",
+                             basis="媒体自有域名", expected_version=2)
+    reg = SourceRegistry.load(store.sources_path(p.project_id))
     assert reg.profile("github.com", "https://github.com/tenstorrent/tt-metal").grade == "A"
     assert reg.profile("news.example.com", "https://news.example.com/ai").grade == "B"
     # another path on the same host is NOT covered by the declared source
@@ -79,6 +87,8 @@ def test_alnum_phrases_need_boundaries():
 
 def test_generated_thesis_drives_the_real_pipeline(store):
     p = store.create(_spec(), ready=True)
+    p = store.confirm_source(p.project_id, "https://github.com/tenstorrent/tt-metal", "official", by="研究员",
+                             basis="Tenstorrent 官方 GitHub 组织", expected_version=1)
     report = {"from": 1, "to": 3, "mode": "net_change", "total": 1, "offset": 0, "limit": 50, "monitors_checked": 1,
               "changes_total": 1, "incomplete": False, "watches": [{
         "uuid": "11111111-1111-4111-8111-111111111111", "title": "Tenstorrent tt-metal README",

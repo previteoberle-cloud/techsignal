@@ -61,7 +61,9 @@ def test_create_project_from_the_form(root):
     assert at.selectbox(key="project").value == items[0].project_id
     t = _text(at)
     assert "尚无监测变化" in t and "不会显示任何示例或伪造的数据" in t
-    assert "70B" in t and "公司官方｜A 级" in t and "不是语义理解" in t
+    assert "70B" in t and "不是语义理解" in t
+    # R6.1: no type was declared (default 未分类) and nothing is confirmed
+    assert "未确认（你声明为未分类）｜按 D 级处理" in t and "请到「来源确认」页确认" in t
 
 
 def test_invalid_input_shows_errors_and_creates_nothing(root):
@@ -140,6 +142,7 @@ def test_monitoring_flow_in_the_workbench(root):
         at = _fill(_open(root))
         at.button(key="create_project").click().run()
         pid = at.selectbox(key="project").value
+        _confirm_first_source(at, pid, 1)
         at.radio(key="ppage").set_value("监测与评估").run()
         assert "当前未连接 changedetection.io" in _text(at)          # works without the service
         at.text_input(key="mon_url").set_value(cdio.url)
@@ -165,6 +168,91 @@ def test_monitoring_flow_in_the_workbench(root):
         for f in root.rglob("*"):
             if f.is_file():
                 assert "sk-ui-SECRET" not in f.read_text(encoding="utf-8", errors="replace")
-        assert P.ProjectStore(root).get(pid).version == 1
+        assert P.ProjectStore(root).get(pid).version == 2             # v2 = the source confirmation only
+    finally:
+        cdio.close()
+
+
+def _confirm_first_source(at, pid, version, basis="仓库属于 Tenstorrent 官方 GitHub 组织"):
+    at.radio(key="ppage").set_value("来源确认").run()
+    k = f"cf-{pid}-v{version}-0"
+    at.selectbox(key=f"{k}-type").set_value("official")
+    at.text_input(key=f"{k}-by").set_value("王研究员")
+    at.text_input(key=f"{k}-basis").set_value(basis)
+    at.button(key=f"{k}-go").click().run()
+    assert not at.exception
+
+
+def test_r61_source_confirmation_flow(root):
+    at = _fill(_open(root))
+    at.button(key="create_project").click().run()
+    pid = at.selectbox(key="project").value
+    at.radio(key="ppage").set_value("来源确认").run()
+    assert "未确认" in _text(at) and "不能单独支撑支持或削弱判断" in _text(at)
+    k = f"cf-{pid}-v1-0"
+    at.text_input(key=f"{k}-basis").set_value("是")                    # too thin a basis is refused
+    at.button(key=f"{k}-go").click().run()
+    assert "请写明确认依据" in _text(at) and P.ProjectStore(root).get(pid).version == 1
+    _confirm_first_source(at, pid, 1)
+    p = P.ProjectStore(root).get(pid)
+    c = p.spec.sources[0].confirmation
+    assert p.version == 2 and (c.by, c.confirmed_type, c.basis) == ("王研究员", "official", "仓库属于 Tenstorrent 官方 GitHub 组织")
+    t = _text(at)
+    assert "已确认：公司官方｜A 级｜王研究员" in t
+    at.radio(key="ppage").set_value("修改记录").run()
+    assert "确认来源" in _text(at) and "未确认" in _text(at)            # v1 is still shown as unconfirmed
+    at.radio(key="ppage").set_value("来源确认").run()
+    at.button(key=f"cf-{pid}-v2-0-revoke").click().run()
+    assert P.ProjectStore(root).get(pid).spec.sources[0].confirmation is None
+
+
+def test_r61_r6_project_shows_its_migration(root):
+    """A project saved by R6 (declared official -> grade A in sources.json) is shown regenerated."""
+    import json as _json
+    store = P.ProjectStore(root)
+    p = store.create(P.spec_from_form(name="Cerebras", question="q", judgement="j",
+                                      assumptions=[{"statement": "s", "weaken": "延期"}],
+                                      urls="https://cerebras.example/news", source_types={"https://cerebras.example/news": "official"}),
+                     ready=True)
+    f = store.project_dir(p.project_id) / "sources.json"
+    src = _json.loads(f.read_text(encoding="utf-8"))
+    src["sources"][0]["grade"] = "A"
+    f.write_text(_json.dumps(src, ensure_ascii=False), encoding="utf-8")
+    at = _open(root)
+    t = _text(at)
+    assert "已按 R6.1 规则重新生成" in t and "A → C" in t
+    at.radio(key="ppage").set_value("修改记录").run()
+    assert "规则调整记录" in _text(at)
+
+
+def test_r61_key_survives_visiting_another_page(root):
+    """Regression check for a bug found in the R6.1 browser run: after visiting another project page the
+    API key field came back empty and the next check failed with 403. NOTE: streamlit.testing keeps
+    widget state that the real server discards, so this test also passes on the old code; the bug is
+    reproduced and its fix verified by docs/screenshots/r6_browser_check.js in a real browser."""
+    from fake_cdio import FakeCdio
+    page = "https://github.com/tenstorrent/tt-metal"
+    cdio = FakeCdio(key="sk-ui-KEEP")
+    cdio.pages[page] = "Models\n"
+    try:
+        at = _fill(_open(root))
+        at.button(key="create_project").click().run()
+        pid = at.selectbox(key="project").value
+        at.radio(key="ppage").set_value("监测与评估").run()
+        at.text_input(key="mon_url").set_value(cdio.url)
+        at.text_input(key="mon_key").set_value("sk-ui-KEEP")
+        at.button(key="mon_connect").click().run()
+        at.checkbox(key="mon_confirm").check().run()
+        at.button(key="mon_apply").click().run()
+        _confirm_first_source(at, pid, 1)                      # leaves the monitoring page
+        at.radio(key="ppage").set_value("监测与评估").run()
+        assert at.text_input(key="mon_key").value == "sk-ui-KEEP"
+        at.button(key="mon_check").click().run()
+        assert "鉴权失败" not in _text(at)
+        assert [c.outcome for c in __import__("techsignal.project_monitor", fromlist=["x"]).checks(
+            P.ProjectStore(root), pid)][-1] != "failed"
+        for f in root.rglob("*"):
+            if f.is_file():
+                assert "sk-ui-KEEP" not in f.read_text(encoding="utf-8", errors="replace")
     finally:
         cdio.close()

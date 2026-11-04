@@ -267,7 +267,7 @@ class RunView:
             "id": ev.evidence_id,
             "source_name": ev.source_name,
             "source_type": L.zh(L.SOURCE_TYPE, ev.source_type),
-            "grade": L.zh(L.GRADE, ev.grade),
+            "grade": (f"{ev.grade.value} 级｜来源未经确认" if "未确认来源" in ev.source_name else L.zh(L.GRADE, ev.grade)),
             "url": ev.source_url,
             "obtained": f"补证查询 {ev.tool_call_id} 获取" if via_tool else "changedetection.io 监测到的变化",
             "published": (f"{fmt_iso(pub.get('commit_date'))}（提交 {pub.get('commit', '')[:10]}）" if pub

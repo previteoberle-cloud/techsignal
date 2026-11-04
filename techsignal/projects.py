@@ -87,10 +87,22 @@ class AssumptionInput(_Strict):
     weaken_signals: list[str] = Field(default_factory=list)    # phrases that would weaken it
 
 
+class SourceConfirmation(_Strict):
+    """A person confirmed who publishes this URL (R6.1). Only a confirmation lets a source reach the
+    grade of its type; a type the user merely declared is a claim, not an identity."""
+    confirmed_type: SourceType
+    by: str
+    at: str
+    basis: str
+
+
 class SourceInput(_Strict):
     url: str
     label: str = ""
-    source_type: SourceType = SourceType.OFFICIAL
+    # What the user DECLARED the source to be. Since R6.1 the form default is "unknown", and a
+    # declaration alone never gives grade A or B (see source_grade).
+    source_type: SourceType = SourceType.UNKNOWN
+    confirmation: SourceConfirmation | None = None
 
 
 class ProjectSpec(_Strict):
@@ -102,6 +114,9 @@ class ProjectSpec(_Strict):
     sources: list[SourceInput] = Field(default_factory=list)
     keywords: list[str] = Field(default_factory=list)
     owner: str = "研究负责人"
+    # R6.1: aliases that may also name someone else; a change that only mentions these is not
+    # attributed to the subject without human confirmation
+    ambiguous_aliases: list[str] = Field(default_factory=list)
 
 
 class Project(_Strict):
@@ -261,6 +276,11 @@ def check_spec(spec: ProjectSpec, ready: bool, allow_private: bool = False) -> P
     problems: list[str] = []
     name = _bounded(spec.name, MAX_NAME, "研究对象名称", problems)
     aliases = [a for a in _phrases(spec.aliases, "别名", problems, MAX_ALIASES) if name_key(a) != name_key(name)]
+    ambiguous = [a for a in _phrases(spec.ambiguous_aliases, "易混淆的简称", problems, MAX_ALIASES)
+                 if name_key(a) != name_key(name)]
+    for a in ambiguous:
+        if a.casefold() not in {x.casefold() for x in aliases}:
+            aliases.append(a)                    # an ambiguous alias is still an alias
     question = _bounded(spec.question, MAX_QUESTION, "研究问题", problems)
     judgement = _bounded(spec.judgement, MAX_JUDGEMENT, "当前研究判断", problems)
     owner = _bounded(spec.owner, 40, "负责人", problems) or "研究负责人"
@@ -291,6 +311,8 @@ def check_spec(spec: ProjectSpec, ready: bool, allow_private: bool = False) -> P
         if _url_key(url) in seen:
             continue
         seen.add(_url_key(url))
+        # Confirmations never come in through the form: they are set only by confirm_source() and
+        # carried over by update() for URLs that did not change.
         sources.append(SourceInput(url=url, label=_bounded(s.label, MAX_LABEL, "来源说明", problems),
                                    source_type=s.source_type))
     if len(sources) > MAX_SOURCES:
@@ -313,7 +335,7 @@ def check_spec(spec: ProjectSpec, ready: bool, allow_private: bool = False) -> P
     if problems:
         raise ProjectError(f"有 {len(problems)} 处需要修改", problems)
     return ProjectSpec(name=name, aliases=aliases, question=question, judgement=judgement, assumptions=assumptions,
-                       sources=sources, keywords=keywords, owner=owner)
+                       sources=sources, keywords=keywords, owner=owner, ambiguous_aliases=ambiguous)
 
 
 def spec_warnings(spec: ProjectSpec) -> list[str]:
@@ -328,7 +350,7 @@ def spec_warnings(spec: ProjectSpec) -> list[str]:
 
 def spec_from_form(name: str = "", aliases: str = "", question: str = "", judgement: str = "",
                    assumptions: list[dict] | None = None, urls: str = "", source_types: dict | None = None,
-                   keywords: str = "", owner: str = "") -> ProjectSpec:
+                   keywords: str = "", owner: str = "", ambiguous_aliases: str = "") -> ProjectSpec:
     """Plain form text -> ProjectSpec (not yet checked). assumptions: [{statement, support, weaken}]
     with comma/newline separated phrases; urls: one per line, optionally "网址 说明"."""
     source_types = source_types or {}
@@ -339,14 +361,15 @@ def spec_from_form(name: str = "", aliases: str = "", question: str = "", judgem
             continue
         url, _, label = line.partition(" ")
         srcs.append(SourceInput(url=url, label=label.strip(),
-                                source_type=source_types.get(url, SourceType.OFFICIAL)))
+                                source_type=source_types.get(url, SourceType.UNKNOWN)))
     return ProjectSpec(
         name=name or "", aliases=split_items(aliases), question=question or "", judgement=judgement or "",
         assumptions=[AssumptionInput(statement=a.get("statement", "") or "",
                                      support_signals=split_items(a.get("support", "")),
                                      weaken_signals=split_items(a.get("weaken", "")))
                      for a in (assumptions or [])],
-        sources=srcs, keywords=split_items(keywords), owner=owner or "研究负责人")
+        sources=srcs, keywords=split_items(keywords), owner=owner or "研究负责人",
+        ambiguous_aliases=split_items(ambiguous_aliases))
 
 
 # ---------------------------------------------------------------------------
@@ -377,7 +400,8 @@ def build_thesis(project: Project) -> Thesis:
                                 support_patterns=[literal_pattern(p) for p in a.support_signals],
                                 weaken_patterns=[literal_pattern(p) for p in a.weaken_signals])
                      for i, a in enumerate(s.assumptions, 1)],
-        status="active", as_of=project.updated_at[:10], owner=s.owner, fictional=not all_public(s), sources=[])
+        status="active", as_of=project.updated_at[:10], owner=s.owner, fictional=not all_public(s), sources=[],
+        ambiguous_entities=list(s.ambiguous_aliases))
 
 
 def all_public(spec: ProjectSpec) -> bool:
@@ -391,15 +415,39 @@ def all_public(spec: ProjectSpec) -> bool:
     return True
 
 
+UNCONFIRMED_CEILING = EvidenceGrade.C
+TYPE_ZH = {SourceType.OFFICIAL: "公司官方", SourceType.REGULATOR: "监管/交易所", SourceType.MEDIA: "媒体",
+            SourceType.ANALYST: "第三方分析", SourceType.FORUM: "论坛/社区", SourceType.UNKNOWN: "未分类"}
+
+
+def source_grade(s: SourceInput) -> tuple[SourceType, EvidenceGrade, bool]:
+    """(type used, grade, confirmed). Confirmed: the grade of the confirmed type. Unconfirmed: at most
+    grade C whatever the user declared, so it can never on its own carry a supports/weakens call
+    (only A/B can, models.DECISIVE_GRADES); its type is recorded as unknown."""
+    if s.confirmation is not None:
+        t = s.confirmation.confirmed_type
+        return t, GRADE_FOR_TYPE[t], True
+    declared = GRADE_FOR_TYPE[s.source_type]
+    grade = declared if declared in (EvidenceGrade.C, EvidenceGrade.D) else UNCONFIRMED_CEILING
+    return SourceType.UNKNOWN, grade, False
+
+
 def build_sources(project: Project) -> list[SourceProfile]:
     out: dict[tuple[str, str], SourceProfile] = {}
     for s in project.spec.sources:
         p = urlsplit(s.url)
         prefix = "" if p.path in ("", "/") else p.path
-        out[(p.hostname or "", prefix)] = SourceProfile(
-            domain=p.hostname or "", path_prefix=prefix, name=s.label or (p.hostname or "") + prefix,
-            source_type=s.source_type, grade=GRADE_FOR_TYPE[s.source_type],
-            note="来源类型由项目创建者声明，等级按类型确定")
+        stype, grade, confirmed = source_grade(s)
+        base = s.label or (p.hostname or "") + prefix
+        if confirmed:
+            c = s.confirmation
+            name = f"{base}（已确认：{TYPE_ZH[c.confirmed_type]}）"
+            note = f"来源身份由 {c.by} 于 {c.at} 确认，依据：{c.basis}"
+        else:
+            name = f"{base}（未确认来源，用户声明为{TYPE_ZH[s.source_type]}）"
+            note = f"来源身份未经确认，按 {grade.value} 级处理，不能单独支撑方向判断"
+        out[(p.hostname or "", prefix)] = SourceProfile(domain=p.hostname or "", path_prefix=prefix, name=name,
+                                                        source_type=stype, grade=grade, note=note)
     return list(out.values())
 
 
@@ -601,10 +649,23 @@ class ProjectStore:
     def update(self, project_id: str, spec: ProjectSpec, expected_version: int, ready: bool,
                note: str = "") -> Project:
         """Save an edit. Refused (ProjectConflict) when the project changed since `expected_version`.
-        A ready project cannot go back to draft: its runs refer to a complete judgement."""
+        A ready project cannot go back to draft: its runs refer to a complete judgement.
+        Source confirmations are carried over for URLs that are still in the project; a new URL is
+        always unconfirmed (an edit cannot create or forge a confirmation)."""
         spec = check_spec(spec, ready, self.allow_private_urls)
+
+        def carry(cur: Project) -> ProjectSpec:
+            kept = {_url_key(x.url): x.confirmation for x in cur.spec.sources}
+            return spec.model_copy(update={"sources": [x.model_copy(update={"confirmation": kept.get(_url_key(x.url))})
+                                                       for x in spec.sources]})
+        return self._commit(project_id, expected_version, carry, ready,
+                            lambda cur: note or ("完成创建" if ready and cur.status == "draft" else "修改"),
+                            check_name=spec.name)
+
+    def _commit(self, project_id, expected_version, make_spec, ready, make_note, check_name=None) -> Project:
         with self._lock():
-            self._check_name_free(spec.name, except_id=project_id)
+            if check_name is not None:
+                self._check_name_free(check_name, except_id=project_id)
             with self._lock(project_id):
                 cur = self.get(project_id)
                 if cur.version != expected_version:
@@ -613,9 +674,100 @@ class ProjectStore:
                         "为避免覆盖，本次未保存；请重新打开项目后再修改。")
                 if cur.status == "ready" and not ready:
                     raise ProjectError("已创建的项目不能退回草稿")
+                spec = make_spec(cur)
                 if cur.spec == spec and cur.status == ("ready" if ready else "draft"):
                     return cur
                 project = cur.model_copy(update={"spec": spec, "status": "ready" if ready else "draft",
                                                  "version": cur.version + 1, "updated_at": now_iso()})
-                self._write(project, note or ("完成创建" if ready and cur.status == "draft" else "修改"))
+                self._write(project, make_note(cur))
         return project
+
+    # -- source identity (R6.1) ------------------------------------------------------------
+
+    def _source_index(self, cur: Project, url: str) -> int:
+        try:
+            key = _url_key(check_public_url(url, allow_private=True))
+        except ProjectError:
+            key = None
+        for i, s in enumerate(cur.spec.sources):
+            if _url_key(s.url) == key:
+                return i
+        raise ProjectError(f"该网址不在本项目中：{url}")
+
+    def confirm_source(self, project_id: str, url: str, confirmed_type: SourceType | str, by: str, basis: str,
+                       expected_version: int) -> Project:
+        """Record that a person confirmed who publishes `url`, as a new project version."""
+        by, basis = clean_text(by), clean_text(basis)
+        problems = []
+        if not by or len(by) > 40:
+            problems.append("请填写确认人（不超过 40 个字符）")
+        if len(basis) < 4 or len(basis) > 300:
+            problems.append("请写明确认依据（4 到 300 个字符），例如「域名与公司年报披露的官网一致」")
+        try:
+            ctype = SourceType(confirmed_type)
+        except ValueError:
+            problems.append("来源类型无效")
+            ctype = None
+        if problems:
+            raise ProjectError(f"有 {len(problems)} 处需要修改", problems)
+
+        def make(cur: Project) -> ProjectSpec:
+            i = self._source_index(cur, url)
+            srcs = list(cur.spec.sources)
+            srcs[i] = srcs[i].model_copy(update={"confirmation": SourceConfirmation(
+                confirmed_type=ctype, by=by, at=now_iso(), basis=basis)})
+            return cur.spec.model_copy(update={"sources": srcs})
+        label = url
+        return self._commit(project_id, expected_version, make, True,
+                            lambda cur: f"确认来源：{label} → {TYPE_ZH[ctype]}（{by}）")
+
+    def revoke_source(self, project_id: str, url: str, by: str, expected_version: int) -> Project:
+        by = clean_text(by)
+        if not by:
+            raise ProjectError("请填写撤销人")
+
+        def make(cur: Project) -> ProjectSpec:
+            i = self._source_index(cur, url)
+            srcs = list(cur.spec.sources)
+            srcs[i] = srcs[i].model_copy(update={"confirmation": None})
+            return cur.spec.model_copy(update={"sources": srcs})
+        return self._commit(project_id, expected_version, make, True, lambda cur: f"撤销来源确认：{url}（{by}）")
+
+    def sync_generated(self, project_id: str) -> list[str]:
+        """Regenerate theses.json / sources.json from the current project.json if they differ (e.g. a
+        project saved by R6, when a declared type still gave grade A). Grades can only follow the
+        current rules; every grade change is appended to migrations.jsonl. project.json and its
+        version are not touched. Returns the change notes (empty when nothing changed)."""
+        with self._lock(project_id):
+            p = self.get(project_id)
+            if p.status != "ready":
+                return []
+            d = self.project_dir(project_id)
+            th_text = json.dumps({"theses": [build_thesis(p).model_dump(mode="json")]}, ensure_ascii=False, indent=2) + "\n"
+            new_sources = build_sources(p)
+            src_text = json.dumps({"sources": [s.model_dump(mode="json") for s in new_sources]},
+                                  ensure_ascii=False, indent=2) + "\n"
+            old_th = (d / "theses.json").read_text(encoding="utf-8") if (d / "theses.json").exists() else ""
+            old_src = (d / "sources.json").read_text(encoding="utf-8") if (d / "sources.json").exists() else ""
+            if old_th == th_text and old_src == src_text:
+                return []
+            notes = []
+            try:
+                old = {(x["domain"], x.get("path_prefix", "")): x for x in json.loads(old_src or '{"sources": []}')["sources"]}
+            except (ValueError, KeyError, TypeError):
+                old = {}
+            for s in new_sources:
+                o = old.get((s.domain, s.path_prefix))
+                if o and o.get("grade") != s.grade.value:
+                    notes.append(f"{s.domain}{s.path_prefix}：证据等级 {o.get('grade')} → {s.grade.value}（{s.note}）")
+            if old_th and old_th != th_text and not notes:
+                notes.append("研究判断生成文件已按当前版本重新生成")
+            atomic_write(d / "theses.json", th_text)
+            atomic_write(d / "sources.json", src_text)
+            log = d / "migrations.jsonl"
+            prev = log.read_text(encoding="utf-8") if log.exists() else ""
+            entry = {"at": now_iso(), "project_version": p.version,
+                     "reason": "R6.1：来源身份需人工确认，未确认来源最高按 C 级处理；生成文件按当前项目重新生成",
+                     "changes": notes or ["生成文件按当前项目重新生成"]}
+            atomic_write(log, prev + json.dumps(entry, ensure_ascii=False) + "\n")
+            return notes or ["生成文件按当前项目重新生成"]

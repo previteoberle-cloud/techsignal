@@ -33,6 +33,9 @@ def test_new_project_to_real_assessment(tmp_path):
     page = Page("星衡半导体新闻中心\n最新动态\n")
     store = P.ProjectStore(tmp_path / "projects", allow_private_urls=True)
     p = store.create(_spec(page.url), ready=True)
+    # R6.1: a person confirms the source; without it the same change would only be "insufficient"
+    p = store.confirm_source(p.project_id, page.url, "official", by="集成测试",
+                             basis="本地测试页，身份由测试构造", expected_version=1)
     project_files = {f: f.read_bytes() for f in store.project_dir(p.project_id).glob("*.json")}
     with LiveCdio(PY, allow_private_addresses=True, log_path=tmp_path / "cdio.log") as cdio:
         client = M.client_for(cdio.url, cdio.client.api_key, timeout=30)

@@ -13,7 +13,7 @@ from techsignal.workbench import labels as L
 from techsignal.workbench import viewmodel as vm
 
 NEW = "__new__"
-PROJECT_PAGES = ["概况", "监测与评估", "研判结果", "研究设定", "修改记录"]
+PROJECT_PAGES = ["概况", "监测与评估", "研判结果", "来源确认", "研究设定", "修改记录"]
 MATCH_NOTE = ("关键词和信号词按字面匹配（不区分大小写），属于确定性的关键词规则，不是语义理解。"
               "没有填写信号词的假设，相关变化只会被标为「待人工判断」。")
 
@@ -48,7 +48,10 @@ def _project_form(prefix: str, spec: P.ProjectSpec) -> P.ProjectSpec:
     name = st.text_input("公司或主题名称 *", value=spec.name, max_chars=P.MAX_NAME, key=f"{prefix}-name",
                          placeholder="例如：Tenstorrent")
     aliases = st.text_input("别名（可选，用逗号分隔）", value="，".join(spec.aliases), key=f"{prefix}-aliases",
-                            help="变化内容或页面标题中出现名称或任一别名，才认为与该对象有关。别名太短容易误命中。")
+                            help="变化内容或页面标题中出现名称或任一别名，才认为与该对象有关。英文和数字按完整单词匹配（XH 不会命中 XHTech）。")
+    ambiguous = st.text_input("易混淆的简称（可选，逗号分隔）", value="，".join(spec.ambiguous_aliases), key=f"{prefix}-amb",
+                              help="也可能指其他公司或事物的简称。变化里只出现这些简称、没有全称时，系统不会给出支持或削弱，"
+                                   "而是请你人工确认。3 个字母或数字以内的英文简称会自动按此处理。")
     question = st.text_area("技术领域或核心研究问题 *", value=spec.question, max_chars=P.MAX_QUESTION,
                             key=f"{prefix}-question", height=80,
                             placeholder="例如：Blackhole 芯片的大模型推理软件成熟度")
@@ -81,17 +84,18 @@ def _project_form(prefix: str, spec: P.ProjectSpec) -> P.ProjectSpec:
     types = {}
     lines = [ln.strip().partition(" ")[0] for ln in (urls or "").splitlines() if ln.strip()]
     if lines:
-        st.caption("来源类型决定证据等级：公司官方 = A 级，监管或媒体 = B 级，第三方分析 = C 级，论坛或未知 = D 级。只有 A/B 级证据可以单独定向。")
+        st.caption("这里选择的是你对来源的声明。声明本身不会让来源成为 A/B 级：创建后需要在「来源确认」页由人确认来源身份，"
+                   "确认后才按类型分级（公司官方 A 级，监管或媒体 B 级）。未确认的来源最多按 C 级处理，不能单独支撑支持或削弱判断。")
     for i, url in enumerate(lines[: P.MAX_SOURCES + 2]):
         options = [t.value for t in P.SOURCE_TYPE_CHOICES]
-        default = known.get(url, P.SourceType.OFFICIAL).value
-        types[url] = st.selectbox(f"来源类型：{url[:80]}", options, index=options.index(default),
-                                  format_func=lambda v: L.zh(L.SOURCE_TYPE, v), key=f"{prefix}-type-{i}")
+        default = known.get(url, P.SourceType.UNKNOWN).value
+        types[url] = st.selectbox(f"你声明的来源类型：{url[:80]}", options, index=options.index(default),
+                                  format_func=lambda v: P.TYPE_ZH[P.SourceType(v)], key=f"{prefix}-type-{i}")
     keywords = st.text_input("关注的主题词（可选，逗号分隔）", value="，".join(spec.keywords), key=f"{prefix}-kw",
                              help="变化提到了研究对象、但没有命中任何信号词时，若包含主题词，会被标为「待人工判断」，否则视为无关。")
     owner = st.text_input("负责人（可选）", value=spec.owner, max_chars=40, key=f"{prefix}-owner")
     return P.spec_from_form(name=name, aliases=aliases, question=question, judgement=judgement, assumptions=rows,
-                            urls=urls, source_types=types, keywords=keywords, owner=owner)
+                            urls=urls, source_types=types, keywords=keywords, owner=owner, ambiguous_aliases=ambiguous)
 
 
 # ---------------------------------------------------------------------------
@@ -146,10 +150,10 @@ def _overview(store: P.ProjectStore, p: P.Project) -> None:
         st.caption("尚未填写。")
     st.markdown("#### 监测来源")
     for src in s.sources:
-        grade = P.GRADE_FOR_TYPE[src.source_type].value
-        st.markdown(f"- {src.label or src.url}　<span class='ts-tag'>{L.zh(L.SOURCE_TYPE, src.source_type)}｜{grade} 级</span>",
-                    unsafe_allow_html=True)
+        st.markdown(f"- {src.label or src.url}　<span class='ts-tag'>{source_status(src)}</span>", unsafe_allow_html=True)
         st.markdown(f'<div class="ts-line">{src.url}</div>', unsafe_allow_html=True)
+    if any(src.confirmation is None for src in s.sources):
+        st.caption("有来源尚未确认：它们最多按 C 级处理，不能单独支撑支持或削弱判断。请到「来源确认」页确认。")
     if not s.sources:
         st.caption("尚未填写。")
     if s.keywords:
@@ -199,8 +203,14 @@ def _monitor(store: P.ProjectStore, p: P.Project) -> None:
     st.caption("监测依赖你自己运行的 changedetection.io（外部服务）。本页只在你点击按钮时访问它；"
                "不会在后台定时运行，也不会发送通知。API key 只保存在本次浏览器会话中，不写入任何文件。")
     c1, c2 = st.columns([2, 1.3])
-    url = c1.text_input("changedetection.io 地址", value=state.cdio_url or "http://127.0.0.1:5000", key="mon_url")
-    key = c2.text_input("API key", type="password", key="mon_key")
+    # Streamlit forgets a widget's value when the page that shows it is not rendered, so the address and
+    # key are also kept in this browser session's memory (never on disk) - otherwise leaving this page
+    # and coming back sent the next check without a key (found in the R6.1 browser run).
+    mem = ss.setdefault("_cdio_conn", {})
+    url = c1.text_input("changedetection.io 地址", value=mem.get("url") or state.cdio_url or "http://127.0.0.1:5000",
+                        key="mon_url")
+    key = c2.text_input("API key", type="password", value=mem.get("key", ""), key="mon_key")
+    mem.update(url=url, key=key)
     conn_key = f"conn-{p.project_id}"
     if st.button("连接并读取监测项", key="mon_connect"):
         try:
@@ -258,6 +268,7 @@ def _monitor(store: P.ProjectStore, p: P.Project) -> None:
                     rec = None
             if rec is not None:
                 if rec.outcome == "assessed":
+                    ss.pop("prun", None)          # the results page opens on this new run, not an older one
                     st.success(rec.message)
                     st.button("查看研判结果", key="mon_goto_results", on_click=_goto, args=(p.project_id, "研判结果"))
                 elif rec.outcome == "failed":
@@ -410,10 +421,77 @@ def _history(store: P.ProjectStore, p: P.Project) -> None:
                 st.markdown(f"**研究判断**：{v.spec.judgement or '（未填写）'}")
                 for i, a in enumerate(v.spec.assumptions, 1):
                     st.markdown(f"- A{i} {a.statement}")
+                for src in v.spec.sources:
+                    st.caption(f"来源：{src.label or src.url}｜{source_status(src)}")
+    _migrations(store, p)
+
+
+def _migrations(store: P.ProjectStore, p: P.Project) -> None:
+    f = store.project_dir(p.project_id) / "migrations.jsonl"
+    if not f.exists():
+        return
+    st.markdown("#### 规则调整记录")
+    st.caption("系统规则更新后重新生成研判输入时的记录；这些调整不会修改你的研究判断，也不会提高任何来源的等级。")
+    for line in f.read_text(encoding="utf-8").splitlines():
+        try:
+            e = __import__("json").loads(line)
+        except ValueError:
+            continue
+        st.markdown(f"- {_t(e['at'])}（基于 v{e['project_version']}）：{e['reason']}")
+        for c in e.get("changes", []):
+            st.caption("　　" + c)
+
+
+def source_status(src: P.SourceInput) -> str:
+    _, grade, confirmed = P.source_grade(src)
+    if confirmed:
+        c = src.confirmation
+        return f"已确认：{P.TYPE_ZH[c.confirmed_type]}｜{grade.value} 级｜{c.by}，{c.at[:10]}"
+    return f"未确认（你声明为{P.TYPE_ZH[src.source_type]}）｜按 {grade.value} 级处理"
+
+
+def _sources(store: P.ProjectStore, p: P.Project) -> None:
+    if p.status != "ready":
+        st.warning("草稿项目还没有可确认的来源。")
+        return
+    st.caption("只有经过人工确认的来源才按类型分级：公司官方 A 级，监管或权威媒体 B 级。未确认来源最多按 C 级处理，"
+               "不能单独支撑支持或削弱判断。请写明你核对了什么（例如「域名与公司年报披露的官网一致」）。"
+               "每次确认或撤销都会生成新版本，记录确认人、依据和时间。")
+    options = [t.value for t in P.SOURCE_TYPE_CHOICES]
+    for i, src in enumerate(p.spec.sources):
+        with st.container(border=True):
+            st.markdown(f"**{src.label or src.url}**　<span class='ts-tag'>{source_status(src)}</span>",
+                        unsafe_allow_html=True)
+            st.markdown(f'<div class="ts-line">{src.url}</div>', unsafe_allow_html=True)
+            key = f"cf-{p.project_id}-v{p.version}-{i}"
+            if src.confirmation is not None:
+                c = src.confirmation
+                st.caption(f"确认人：{c.by}　·　时间：{_t(c.at)}　·　依据：{c.basis}")
+                by = st.text_input("撤销人", value=p.spec.owner, key=f"{key}-rby", max_chars=40)
+                if st.button("撤销确认", key=f"{key}-revoke"):
+                    try:
+                        store.revoke_source(p.project_id, src.url, by=by, expected_version=p.version)
+                        st.rerun()
+                    except P.ProjectError as e:
+                        _show_problems(e)
+                continue
+            c1, c2 = st.columns([1, 1])
+            ctype = c1.selectbox("确认后的来源类型", options, index=options.index(src.source_type.value),
+                                 format_func=lambda v: P.TYPE_ZH[P.SourceType(v)], key=f"{key}-type")
+            by = c2.text_input("确认人", value=p.spec.owner, key=f"{key}-by", max_chars=40)
+            basis = st.text_input("确认依据", key=f"{key}-basis", max_chars=300,
+                                  placeholder="例如：域名与公司年报、交易所公告中披露的官网一致")
+            if st.button("确认来源", key=f"{key}-go", type="primary"):
+                try:
+                    store.confirm_source(p.project_id, src.url, ctype, by=by, basis=basis, expected_version=p.version)
+                    st.rerun()
+                except P.ProjectError as e:
+                    _show_problems(e)
 
 
 FIELD_ZH = {"name": "研究对象", "aliases": "别名", "question": "研究问题", "judgement": "研究判断",
-            "assumptions": "关键假设", "sources": "监测网址", "keywords": "主题词", "owner": "负责人"}
+            "assumptions": "关键假设", "sources": "监测网址或来源确认", "keywords": "主题词", "owner": "负责人",
+            "ambiguous_aliases": "易混淆的简称"}
 
 
 def _changed_fields(a: P.ProjectSpec, b: P.ProjectSpec) -> list[str]:
@@ -456,8 +534,16 @@ def render() -> None:
         st.error(str(e))
         return
     st.markdown(f"## {p.title}")
+    try:
+        migrated = store.sync_generated(p.project_id)
+    except P.ProjectError:
+        migrated = []
+    if migrated:
+        st.warning("已按 R6.1 规则重新生成本项目的研判输入（研究判断本身没有改动）：" + "；".join(migrated)
+                   + "。详情见「修改记录」。")
     st.markdown(f'<span class="ts-tag">{_status_tag(p)}</span><span class="ts-tag">v{p.version}</span>'
                 f'<span class="ts-tag">我的研究项目（与示例案例分开保存）</span>', unsafe_allow_html=True)
     page = st.radio("项目页面", PROJECT_PAGES, horizontal=True, key="ppage", label_visibility="collapsed")
     st.divider()
-    {"概况": _overview, "监测与评估": _monitor, "研判结果": _results, "研究设定": _edit, "修改记录": _history}[page](store, p)
+    {"概况": _overview, "监测与评估": _monitor, "研判结果": _results, "来源确认": _sources, "研究设定": _edit,
+     "修改记录": _history}[page](store, p)

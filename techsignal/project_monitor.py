@@ -307,6 +307,9 @@ def check_now(store: P.ProjectStore, project_id: str, client: ChangeDetectionCli
             raise MonitorError("该项目还没有关联任何监测项")
         if state.cdio_url and state.cdio_url != client.base_url:
             raise MonitorError(f"该项目关联的是 {state.cdio_url}，与当前连接的地址不一致")
+        # Pipeline inputs always follow the current project and the current source rules (R6.1):
+        # a project saved by R6 is regenerated here, grade changes are logged in migrations.jsonl.
+        store.sync_generated(project_id)
         uuids = [w.watch_uuid for w in state.watches]
         rec = dict(check_id=check_id, started_at=started, thesis_version=project.version, rechecked=[],
                    new_snapshots={}, watch_errors={})

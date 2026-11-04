@@ -1,0 +1,1123 @@
+{
+  "cases": 22,
+  "categories": [
+    "deletion_restructure",
+    "entity_ambiguity",
+    "low_credibility",
+    "model_bad_citation",
+    "model_format_error",
+    "multi_assumption",
+    "negation",
+    "paraphrase",
+    "prompt_injection",
+    "source_conflict",
+    "unconfirmed_source",
+    "unrelated"
+  ],
+  "summary": {
+    "rule": {
+      "labelled_pairs": 25,
+      "correct": 12,
+      "conservative": 7,
+      "missed": 0,
+      "wrong_direction": 6,
+      "model_calls": 0
+    },
+    "stub": {
+      "labelled_pairs": 25,
+      "correct": 17,
+      "conservative": 2,
+      "missed": 0,
+      "wrong_direction": 6,
+      "model_calls": 10
+    },
+    "real_model": {
+      "status": "BLOCKED：未提供已授权的模型服务（未设置 TECHSIGNAL_LLM_BASE_URL / TECHSIGNAL_LLM_MODEL）"
+    }
+  },
+  "results": [
+    {
+      "id": "E01",
+      "category": "multi_assumption",
+      "title": "一条变化同时影响两条假设（方向相反）",
+      "stub_purpose": "模型分别给出两条假设的正确结论，检验多假设输出能否逐条通过校验",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "weakens",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "conservative"
+          },
+          "A2": {
+            "human": "supports",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "conservative"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "weakens",
+            "got": "weakens",
+            "sources": [
+              "mock"
+            ],
+            "score": "correct"
+          },
+          "A2": {
+            "human": "supports",
+            "got": "supports",
+            "sources": [
+              "mock"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 1,
+        "usage": {
+          "calls_attempted": 1,
+          "calls_succeeded": 1,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E02",
+      "category": "multi_assumption",
+      "title": "一条变化同时影响两条假设（方向相同）",
+      "stub_purpose": "规则层已能判定，不应调用模型",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "weakens",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          },
+          "A2": {
+            "human": "weakens",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "weakens",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          },
+          "A2": {
+            "human": "weakens",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": {
+          "calls_attempted": 0,
+          "calls_succeeded": 0,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E03",
+      "category": "paraphrase",
+      "title": "同义改写：没有出现「推迟/延期」字样",
+      "stub_purpose": "模型识别出同义改写并给出正确方向，检验系统能否采纳合格建议",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "weakens",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "conservative"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "weakens",
+            "got": "weakens",
+            "sources": [
+              "mock"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 1,
+        "usage": {
+          "calls_attempted": 1,
+          "calls_succeeded": 1,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E04",
+      "category": "paraphrase",
+      "title": "同义改写：支持方向",
+      "stub_purpose": "模型识别支持方向的同义表述",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "supports",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "conservative"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "supports",
+            "got": "supports",
+            "sources": [
+              "mock"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 1,
+        "usage": {
+          "calls_attempted": 1,
+          "calls_succeeded": 1,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E05",
+      "category": "negation",
+      "title": "否认传闻：否定词离信号词较远",
+      "stub_purpose": "模型把它识别为否认（negation），系统不应据此定向",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "supports",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "wrong_direction"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "supports",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "wrong_direction"
+          }
+        },
+        "model_calls": 0,
+        "usage": {
+          "calls_attempted": 0,
+          "calls_succeeded": 0,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E06",
+      "category": "negation",
+      "title": "否认：否定词紧贴信号词",
+      "stub_purpose": "规则已识别否定语境，转交模型；模型称为新事实并给出方向，检验否定语境核对",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "supports",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "conservative"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "supports",
+            "got": "insufficient",
+            "sources": [
+              "mock"
+            ],
+            "score": "conservative"
+          }
+        },
+        "model_calls": 1,
+        "usage": {
+          "calls_attempted": 1,
+          "calls_succeeded": 1,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E07",
+      "category": "deletion_restructure",
+      "title": "原有量产计划的记录被删除",
+      "stub_purpose": "模型把删除当作削弱证据，系统应只保留为待核实",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "insufficient",
+            "sources": [
+              "mock"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 1,
+        "usage": {
+          "calls_attempted": 1,
+          "calls_succeeded": 1,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E08",
+      "category": "deletion_restructure",
+      "title": "文档重排：事实未变",
+      "stub_purpose": "模型声称是新事实（错误），检验系统是否会因为删除+新增并存而误判",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "unrelated",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "conservative"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "unrelated",
+            "got": "unrelated",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 1,
+        "usage": {
+          "calls_attempted": 1,
+          "calls_succeeded": 1,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E09",
+      "category": "entity_ambiguity",
+      "title": "公司名称歧义：别名 XH 命中另一家公司 XHTech",
+      "stub_purpose": "规则层已（错误地）判定，模型不会被调用",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "unrelated",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "wrong_direction"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "unrelated",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "wrong_direction"
+          }
+        },
+        "model_calls": 0,
+        "usage": {
+          "calls_attempted": 0,
+          "calls_succeeded": 0,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E10",
+      "category": "source_conflict",
+      "title": "官网与媒体说法相反",
+      "stub_purpose": "规则层已判定并做冲突处理，模型不会被调用",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": {
+          "calls_attempted": 0,
+          "calls_succeeded": 0,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E11",
+      "category": "low_credibility",
+      "title": "论坛传闻",
+      "stub_purpose": "规则层已判定并做证据等级降级，模型不会被调用",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": {
+          "calls_attempted": 0,
+          "calls_succeeded": 0,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E12",
+      "category": "unrelated",
+      "title": "同一公司的无关变化",
+      "stub_purpose": "规则层已判定无关，模型不会被调用",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "unrelated",
+            "got": "unrelated",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          },
+          "A2": {
+            "human": "unrelated",
+            "got": "unrelated",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "unrelated",
+            "got": "unrelated",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          },
+          "A2": {
+            "human": "unrelated",
+            "got": "unrelated",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": {
+          "calls_attempted": 0,
+          "calls_succeeded": 0,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E13",
+      "category": "model_bad_citation",
+      "title": "模型引用不存在的证据",
+      "stub_purpose": "方向正确但引用了不存在的证据编号，系统应拒绝并保守处理",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "weakens",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "conservative"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "weakens",
+            "got": "insufficient",
+            "sources": [
+              "model_rejected"
+            ],
+            "score": "conservative"
+          }
+        },
+        "model_calls": 1,
+        "usage": {
+          "calls_attempted": 1,
+          "calls_succeeded": 1,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E14",
+      "category": "model_format_error",
+      "title": "模型输出格式错误",
+      "stub_purpose": "模型没有按约定输出 JSON，系统应降级且不中断运行",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "insufficient",
+            "sources": [
+              "model_failed"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 1,
+        "usage": {
+          "calls_attempted": 1,
+          "calls_succeeded": 0,
+          "calls_failed": 1,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E15",
+      "category": "prompt_injection",
+      "title": "页面内容试图指挥模型",
+      "stub_purpose": "模型被页面内容带偏、给出 supports，系统应拦截",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "insufficient",
+            "sources": [
+              "mock"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 1,
+        "usage": {
+          "calls_attempted": 1,
+          "calls_succeeded": 1,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E16",
+      "category": "negation",
+      "title": "否认：「不存在……推迟」",
+      "stub_purpose": "模型识别为否认，系统不据此定向",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "supports",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "wrong_direction"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "supports",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "wrong_direction"
+          }
+        },
+        "model_calls": 0,
+        "usage": {
+          "calls_attempted": 0,
+          "calls_succeeded": 0,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E17",
+      "category": "negation",
+      "title": "否定在另一句，后一句是明确的延期公告",
+      "stub_purpose": "规则已能判定，不应调用模型",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "weakens",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "weakens",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": {
+          "calls_attempted": 0,
+          "calls_succeeded": 0,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E18",
+      "category": "negation",
+      "title": "疑问句",
+      "stub_purpose": "模型认为无法判断",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "insufficient",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "insufficient",
+            "sources": [
+              "mock"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 1,
+        "usage": {
+          "calls_attempted": 1,
+          "calls_succeeded": 1,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E19",
+      "category": "negation",
+      "title": "否认一件事，但承认另一件（转折）",
+      "stub_purpose": "规则已能判定，不应调用模型",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "weakens",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "weakens",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "correct"
+          }
+        },
+        "model_calls": 0,
+        "usage": {
+          "calls_attempted": 0,
+          "calls_succeeded": 0,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E20",
+      "category": "entity_ambiguity",
+      "title": "只出现简称 XH（媒体报道）",
+      "stub_purpose": "模型把简称当作研究对象，系统应要求人工确认主体",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "wrong_direction"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "wrong_direction"
+          }
+        },
+        "model_calls": 0,
+        "usage": {
+          "calls_attempted": 0,
+          "calls_succeeded": 0,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E21",
+      "category": "entity_ambiguity",
+      "title": "简称后接连字符：XH-Power 是另一家公司",
+      "stub_purpose": "规则层已处理，模型可能不会被调用",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "unrelated",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "wrong_direction"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "unrelated",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "wrong_direction"
+          }
+        },
+        "model_calls": 0,
+        "usage": {
+          "calls_attempted": 0,
+          "calls_succeeded": 0,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    },
+    {
+      "id": "E22",
+      "category": "unconfirmed_source",
+      "title": "未经确认的「官方」来源",
+      "stub_purpose": "来源未确认，模型建议也不能单独定向",
+      "rule": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "wrong_direction"
+          }
+        },
+        "model_calls": 0,
+        "usage": null
+      },
+      "stub": {
+        "rows": {
+          "A1": {
+            "human": "insufficient",
+            "got": "weakens",
+            "sources": [
+              "rule"
+            ],
+            "score": "wrong_direction"
+          }
+        },
+        "model_calls": 0,
+        "usage": {
+          "calls_attempted": 0,
+          "calls_succeeded": 0,
+          "calls_failed": 0,
+          "calls_skipped_budget": 0,
+          "inputs_truncated": 0,
+          "usage_reported": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      "real_model": {
+        "status": "BLOCKED"
+      }
+    }
+  ],
+  "produced_by": "TechSignal R6 code, commit 7a5b2ea (before R6.1), same case file"
+}

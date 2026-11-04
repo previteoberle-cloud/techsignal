@@ -226,6 +226,8 @@ def _from_model_multi(event, t, evidence, match, outcome, provider, stats) -> li
             why = None
             if injected:
                 why = "提示注入核对：变化内容中含有疑似针对模型的指令，模型建议不据此定向"
+            elif getattr(match, "weak", False):
+                why = f"主体核对：只命中了简称「{'、'.join(match.entity_hits)}」，需要人工确认是否为研究对象"
             elif v.change_kind != "new_fact":
                 why = f"变化类型门槛：模型判断这是「{kind}」，不是新出现的事实，系统不据此定向"
             elif not t.meaningful_added:

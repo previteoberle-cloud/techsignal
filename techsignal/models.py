@@ -163,6 +163,8 @@ class Thesis(_Strict):
     owner: str
     fictional: bool
     sources: list[ThesisSource] = Field(default_factory=list)
+    # R6.1: aliases that alone do not establish the subject (they need human confirmation)
+    ambiguous_entities: list[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
