@@ -97,15 +97,16 @@ python -m techsignal.workbench
 侧栏「工作区」切到「我的研究项目」：
 
 1. 填写研究对象、研究问题、当前判断、关键假设（可写支持 / 削弱信号词）和要监测的公开网址，点「创建研究项目」。也可以先保存草稿。不需要写 JSON、代码或正则；信号词按字面匹配，不是语义理解。
-2. 「监测与评估」：填写你自己运行的 changedetection.io 地址和 API key → 连接 → 勾选确认后建立监测 → 「立即检查一次并研判」。第一次抓取只建立基线；没有新快照或没有实质差异时只记录「本次没有新的变化」，不会生成研判。
-3. 「研判结果」：每条判断写明判断来源、发生了什么、为什么、引用的证据、通过了哪些检查、还有什么没解决。
-4. 「研究设定」修改判断会生成新版本，「修改记录」保留全部旧版本；后台检查永远不会改写你的判断。
+2. 「来源确认」（R6.1）：创建时选的来源类型只是你的声明，**未确认的来源最多按 C 级处理，不能单独支撑支持或削弱判断**。核对来源身份后，写明确认人和依据并确认，才会按类型分级（公司官方 A 级，监管或媒体 B 级）。确认和撤销都会留下版本记录。
+3. 「监测与评估」：填写你自己运行的 changedetection.io 地址和 API key → 连接 → 勾选确认后建立监测 → 「立即检查一次并研判」。第一次抓取只建立基线；没有新快照或没有实质差异时只记录「本次没有新的变化」，不会生成研判。
+4. 「研判结果」：每条判断写明判断来源、发生了什么、为什么、引用的证据、通过了哪些检查、还有什么没解决。
+5. 「研究设定」修改判断会生成新版本，「修改记录」保留全部旧版本；后台检查永远不会改写你的判断。
 
 项目默认保存在 `~/.techsignal/projects`（环境变量 `TECHSIGNAL_PROJECTS_ROOT` 可改），不会写进仓库里的示例案例。没有 changedetection.io 时，工作台照常打开，并明确提示需要这个外部服务。
 
 ![新建项目后的研判结果](docs/screenshots/r6_07_result_explained.png)
 
-可选的模型层（运营方配置，不在页面里填密钥）：`TECHSIGNAL_LLM_BASE_URL`、`TECHSIGNAL_LLM_MODEL`、`TECHSIGNAL_LLM_API_KEY`，以及 `TECHSIGNAL_LLM_MAX_CALLS`（默认 20）、`TECHSIGNAL_LLM_MAX_INPUT_CHARS`（默认 6000）、`TECHSIGNAL_LLM_TIMEOUT`（默认 30 秒）。规则仍然先判断，只有规则无法判定的变化才交给模型；模型建议要通过结构、引用、变化类型、证据等级和提示注入检查，失败就按「证据不足」处理。
+可选的模型层（运营方配置，不在页面里填密钥）：`TECHSIGNAL_LLM_BASE_URL`、`TECHSIGNAL_LLM_MODEL`、`TECHSIGNAL_LLM_API_KEY`，以及 `TECHSIGNAL_LLM_MAX_CALLS`（默认 20）、`TECHSIGNAL_LLM_MAX_INPUT_CHARS`（默认 6000）、`TECHSIGNAL_LLM_TIMEOUT`（默认 30 秒）。规则仍然先判断，只有规则无法判定的变化才交给模型；模型建议要通过结构、引用、变化类型、主体、证据等级和提示注入检查，失败就按「证据不足」处理。规则、模型与安全闸门的关系见 [docs/DECISION_POLICY.md](docs/DECISION_POLICY.md)。
 
 命令行演示（虚构数据，Mock 回放模型层）：
 
@@ -140,7 +141,7 @@ python -m techsignal run --cdio-url http://localhost:5000 --from 1790812800 --th
 |---|---|
 | 离线测试 | 见 [docs/R5_ACCEPTANCE.md](docs/R5_ACCEPTANCE.md) 中干净克隆下的实测数字；不需要网络、模型或 changedetection.io |
 | 虚构场景评测 | 23/23 场景通过（`python -m techsignal eval`）。场景和预期都由开发者编写，只说明行为符合设计，**不代表真实准确率** |
-| R6 评测集 | 15 个虚构案例、18 个「案例 × 假设」人工标注，见 [docs/R6_EVAL.md](docs/R6_EVAL.md)。规则层：9 个一致、7 个保守交人工、**2 个方向错误**（远距离否定、过短别名命中另一家公司）。协议桩一列只检验校验与降级逻辑，**不代表模型能力**；真实模型一列为 BLOCKED |
+| R6 / R6.1 评测集 | 22 个虚构案例、25 个「案例 × 假设」人工标注，见 [docs/R6_EVAL.md](docs/R6_EVAL.md)，整改前后的数字都保留。规则层整改前（R6 代码）：12 个一致、7 个保守、**6 个方向错误**；整改后：15 个一致、10 个保守、**0 个方向错误**。改善主要来自保守降级，人工待核实事项因此增加。协议桩一列只检验校验与降级逻辑，**不代表模型能力**；真实模型一列为 BLOCKED |
 | 变异检验 | 故意关闭等级闸门、冲突处理、去重主体、台账写盘顺序、多假设归因等保护，对应测试都会失败（见各轮验收记录） |
 | 在线集成 | 4 个测试：真实 changedetection.io（固定上游版本）加真实 GitHub 来源，包括真实补证 |
 | 浏览器验收 | R4：六个页面；R6：在真实 changedetection.io 上走完「新建项目 → 确认建立监测 → 基线 → 页面变化 → 研判 → 修改判断 → 版本记录」，含手机宽度。截图见 `docs/screenshots/` |
@@ -159,8 +160,9 @@ python -m techsignal run --cdio-url http://localhost:5000 --from 1790812800 --th
 
 - **没有调用过真实大模型：** 模型层的接口、校验和降级已实现，但只用 Mock 和本地协议桩测试；没有获得授权的模型服务，因此没有任何模型准确率数字。
 - **没有持续后台监控：** 没有调度和通知，只能手动「检查一次」（R7）；真实案例是对历史版本的观测回放。
-- **只有一个真实研究案例**；R6 评测集是 15 个虚构案例，标注由本项目编写，不能代表通用准确率。
-- **规则层的已知错误：** 否定词离信号词较远时会判错方向；名称按字面子串匹配，过短的别名会命中其他公司（页面会提示）。规则先于模型判断，所以模型看不到这两类错误。
+- **只有一个真实研究案例**；评测集是 22 个虚构案例，标注由本项目编写，不能代表通用准确率。
+- **规则层（R6.1 后）：** 否定按分句判断，有否定、辟谣、疑问或双重否定时一律不定向；英文简称按完整单词匹配，只命中短简称时要求人工确认。代价是「待核实」变多。规则对「传闻」类措辞不做特殊处理（交给来源等级）；对同义改写无能为力。规则先于模型判断，模型目前不复核规则的明确结论（设计见 DECISION_POLICY）。
+- **来源身份只能人工确认：** 没有自动的域名身份验证；R6 时保存的项目会被降级为未确认（有记录、不会升级）。
 - 新建项目已不需要写 JSON；**补证白名单仍需手写 JSON**，新建项目暂不执行补证。信号词按字面匹配，对同义改写无能为力（评测集 E03、E04）。
 - **工作台只面向本机使用：** 没有登录与权限，没有做安全加固，**不适合直接部署到公网或多用户环境**。
 - 补证工具目前只覆盖 changedetection.io 快照和 GitHub；官网、新闻稿、监管披露还需要新的适配器。
@@ -184,7 +186,7 @@ TECHSIGNAL_CDIO_PYTHON="$(which python)" TECHSIGNAL_LIVE_NETWORK=1 python -m pyt
 
 本项目先在 changedetection.io 的 Fork 中以独立目录开发（`techsignal/`，PR #1），后用 `git subtree split` 提取为本仓库，**完整保留了 R1–R5 的提交历史**。
 
-- 各轮记录：[R1](docs/R1_ACCEPTANCE.md)、[R2](docs/R2_ACCEPTANCE.md)、[R3](docs/R3_ACCEPTANCE.md)、[R4](docs/R4_ACCEPTANCE.md)、[R5](docs/R5_ACCEPTANCE.md)、[R6](docs/R6_ACCEPTANCE.md)。早期记录中的 `techsignal/...` 路径指的是 Fork 中的目录。
+- 各轮记录：[R1](docs/R1_ACCEPTANCE.md)、[R2](docs/R2_ACCEPTANCE.md)、[R3](docs/R3_ACCEPTANCE.md)、[R4](docs/R4_ACCEPTANCE.md)、[R5](docs/R5_ACCEPTANCE.md)、[R6](docs/R6_ACCEPTANCE.md)、[R6.1](docs/R6_1_ACCEPTANCE.md)。早期记录中的 `techsignal/...` 路径指的是 Fork 中的目录。
 - 技术细节：[docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md)。
 - 演示讲解稿：[docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)。
 
