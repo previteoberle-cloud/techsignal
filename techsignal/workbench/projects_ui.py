@@ -9,7 +9,6 @@ import streamlit as st
 
 from techsignal import project_monitor as M
 from techsignal import projects as P
-from techsignal.workbench import labels as L
 from techsignal.workbench import viewmodel as vm
 
 NEW = "__new__"
