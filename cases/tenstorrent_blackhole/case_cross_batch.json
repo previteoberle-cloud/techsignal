@@ -38,5 +38,6 @@
       2
     ]
   ],
-  "verify_policy": "verify_policy.json"
+  "verify_policy": "verify_policy.json",
+  "output_dir": "output_cross_batch"
 }

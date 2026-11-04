@@ -12,14 +12,14 @@
           "QuietBox",
           "Llama"
         ],
-        "timestamp": "1793774993",
-        "watch_uuid": "2a5df479-cc65-41c1-a702-0726d4d95388"
+        "timestamp": "1793779810",
+        "watch_uuid": "1617ba1d-4ceb-4717-8d01-da6ce6ee58c5"
       },
       "attempts": 1,
       "call_id": "TC-01",
-      "detail": "changedetection.io 保存的快照（1793774993），原始页面 https://raw.githubusercontent.com/tenstorrent/tt-metal/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46/README.md",
+      "detail": "changedetection.io 保存的快照（1793779810），原始页面 https://raw.githubusercontent.com/tenstorrent/tt-metal/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46/README.md",
       "duplicate_of": null,
-      "duration_ms": 4,
+      "duration_ms": 3,
       "error": null,
       "evidence_created": [
         "EV-edded20f04"
@@ -42,12 +42,12 @@
         }
       ],
       "flags": [],
-      "for_assessment": "AS-a7e70eb2fa",
+      "for_assessment": "AS-ba89e5c1af",
       "http_status": 200,
       "purpose": "核对同一页面最新快照中是否仍有相关内容（是否只是移动了位置或换了写法）",
       "status": "ok",
       "tool": "cdio_snapshot_search",
-      "url": "http://127.0.0.1:37253/api/v1/watch/2a5df479-cc65-41c1-a702-0726d4d95388/history/1793774993"
+      "url": "http://127.0.0.1:44851/api/v1/watch/1617ba1d-4ceb-4717-8d01-da6ce6ee58c5/history/1793779810"
     },
     {
       "args": {
@@ -59,13 +59,13 @@
       "call_id": "TC-02",
       "detail": "",
       "duplicate_of": null,
-      "duration_ms": 191,
+      "duration_ms": 240,
       "error": "HTTP 403（GitHub API 拒绝或受环境网络策略限制）",
       "evidence_created": [],
       "evidence_reused": [],
       "findings": [],
       "flags": [],
-      "for_assessment": "AS-a7e70eb2fa",
+      "for_assessment": "AS-ba89e5c1af",
       "http_status": 403,
       "purpose": "读取引起该变化的官方提交说明",
       "status": "error",
@@ -92,7 +92,7 @@
       "call_id": "TC-03",
       "detail": "",
       "duplicate_of": null,
-      "duration_ms": 371,
+      "duration_ms": 377,
       "error": null,
       "evidence_created": [
         "EV-d69099674e"
@@ -160,7 +160,7 @@
         }
       ],
       "flags": [],
-      "for_assessment": "AS-a7e70eb2fa",
+      "for_assessment": "AS-ba89e5c1af",
       "http_status": 200,
       "purpose": "沿变化内容中的官方链接，在同一仓库同一版本的相关文档中查找",
       "status": "ok",
@@ -175,7 +175,7 @@
   "note": "补证由确定性策略触发、规划和执行；没有任何大模型参与决策。每条记录对应一次实际执行（或被拦截/去重）的工具调用。",
   "summaries": [
     {
-      "assessment_id": "AS-a7e70eb2fa",
+      "assessment_id": "AS-ba89e5c1af",
       "assumption_id": "BH1",
       "call_ids": [
         "TC-01",

@@ -141,6 +141,13 @@ class LiveCdio:
             time.sleep(1)
         raise LiveCdioError(f"等待第 {n} 个快照超时（内容可能与上一版本相同，或网络不可达）")
 
+    def observe_next(self, uuid: str, url: str, n: int) -> list[int]:
+        """Point the watch at the next published version and wait for its (n-th) snapshot."""
+        time.sleep(1.1)  # snapshots are keyed by whole seconds
+        self.client.update_watch(uuid, url=url)
+        self.client.recheck(uuid)
+        return self.wait_for_snapshots(uuid, n)
+
     def observe_versions(self, title: str, urls: list[str]) -> dict:
         """Snapshot each URL in turn on ONE watch, so changedetection.io diffs consecutive versions."""
         uuid = self.client.create_watch(urls[0], title=title)  # creating a watch queues its first check
@@ -190,10 +197,14 @@ def run_case(python: str, case_path: Path, out: Path, log_path: Path | None = No
 
 
 def run_cross_batch_case(python: str, case_path: Path, out: Path, log_path: Path | None = None) -> int:
-    """Like run_case, but the case lists several batches (pairs of version indexes). All versions are
-    observed on one watch first; then each batch is processed in order with --track-history, so later
-    batches are judged against the history of earlier ones. A copy of the state after each batch is
-    kept in out/batch<N>/; the cumulative state is in out/state/."""
+    """Like run_case, but the case lists several batches (pairs of consecutive version indexes).
+
+    Versions are observed one at a time on one watch, and each batch is pulled through the API right
+    after its own version was observed. The API reports the watch's URL *at query time*, so this keeps
+    every batch's evidence pointing at the version that actually produced that change (R4 fix: before,
+    all versions were observed first and batch 1 reported the last version's URL). Batches run in
+    order with --track-history. A copy of the state after each batch is kept in out/batch<N>/; the
+    cumulative state is in out/state/."""
     from .cli import main as cli_main
 
     case_path = Path(case_path)
@@ -201,14 +212,19 @@ def run_cross_batch_case(python: str, case_path: Path, out: Path, log_path: Path
     base = case_path.parent
     out = Path(out)
     state = out / "state"
+    urls = [v["url"] for v in case["versions"]]
     with LiveCdio(python, log_path=log_path) as cdio:
-        obs = cdio.observe_versions(case["watch_title"], [v["url"] for v in case["versions"]])
-        ts = obs["snapshot_timestamps"]
+        uuid = cdio.client.create_watch(urls[0], title=case["watch_title"])
+        ts = cdio.wait_for_snapshots(uuid, 1)
+        obs = {"uuid": uuid}
         os.environ["TECHSIGNAL_CDIO_API_KEY"] = cdio.client.api_key
         try:
             for n, (a, b) in enumerate(case["batches"], 1):
+                if b != len(ts) or a != b - 1:
+                    raise LiveCdioError("批次必须按顺序比较相邻版本，例如 [[0,1],[1,2]]")
+                ts = cdio.observe_next(uuid, urls[b], b + 1)
                 rc = cli_main(["run", "--cdio-url", cdio.url, "--from", str(ts[a]), "--to", str(ts[b]),
-                               "--uuids", obs["uuid"], "--max-lines", "2000", "--track-history",
+                               "--uuids", uuid, "--max-lines", "2000", "--track-history",
                                "--theses", str(base / case["theses"]), "--sources", str(base / case["sources"]),
                                "--out", str(state)] + _verify_args(case, base))
                 if rc != 0:

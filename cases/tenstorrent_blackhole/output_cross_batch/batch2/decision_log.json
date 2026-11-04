@@ -1,15 +1,15 @@
 {
   "assessments": [
     {
-      "assessment_id": "AS-a7e70eb2fa",
+      "assessment_id": "AS-ba89e5c1af",
       "assumption_id": "BH1",
       "basis": "rule",
       "confidence": "low",
       "conflicting_evidence_ids": [],
       "direction": "insufficient",
-      "event_id": "CE-3473cc1da7",
+      "event_id": "CE-2b5ecb7d58",
       "evidence_ids": [
-        "EV-7087dcdddb"
+        "EV-a187005cc7"
       ],
       "limitations": [],
       "matched_signals": [
@@ -29,7 +29,7 @@
       "thesis_id": "TH-TT-001",
       "thesis_status_change": "none",
       "verification": {
-        "assessment_id": "AS-a7e70eb2fa",
+        "assessment_id": "AS-ba89e5c1af",
         "assumption_id": "BH1",
         "call_ids": [
           "TC-01",
@@ -57,14 +57,14 @@
   "cross_batch_transitions": [
     {
       "after_evidence_ids": [
-        "EV-7087dcdddb"
+        "EV-a187005cc7"
       ],
       "after_state": "证据不足",
       "assumption_id": "BH1",
       "before_evidence_ids": [
-        "EV-695a70f12d"
+        "EV-84d71bf55a"
       ],
-      "before_run_id": "RUN-fd0f5ed9",
+      "before_run_id": "RUN-0692205c",
       "before_state": "削弱",
       "explanation": "新变化涉及该假设但无法判定方向（如相关内容被删除、处于否定语境），保留历史判断并标记待核实",
       "kind": "unresolved",
@@ -74,24 +74,24 @@
   "filtered": [],
   "meta": {
     "changes_total": 1,
-    "from": 1793774991,
+    "from": 1793779808,
     "incomplete": false,
     "mode": "net_change",
     "monitors_checked": 1,
-    "to": 1793774993,
+    "to": 1793779810,
     "total": 1
   },
   "provenance": {
-    "cdio_base_url": "http://127.0.0.1:37253",
+    "cdio_base_url": "http://127.0.0.1:44851",
     "cdio_version": "0.60.10",
     "data_nature": "public",
-    "fetched_at_utc": "2026-11-04T06:49:54Z",
+    "fetched_at_utc": "2026-11-04T08:10:11Z",
     "input_mode": "live_cdio_api",
     "input_origin": "live_cdio_api",
     "model_judgements": 0,
     "model_layer": "none",
     "model_name": null,
-    "report_sha256": "aafcaecfb430754a317cfb4c099e055024fc33e883bf39af4216a5a3d91b2ae0",
+    "report_sha256": "8ab34da4b44435e543214a642f197d9e09e06f7c932b5cd72b6d124efa431eed",
     "verification": "deterministic_policy",
     "verification_tool_calls": 3
   },
@@ -107,7 +107,7 @@
   },
   "verification": [
     {
-      "assessment_id": "AS-a7e70eb2fa",
+      "assessment_id": "AS-ba89e5c1af",
       "assumption_id": "BH1",
       "call_ids": [
         "TC-01",

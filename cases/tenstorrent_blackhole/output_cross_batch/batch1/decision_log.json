@@ -1,15 +1,15 @@
 {
   "assessments": [
     {
-      "assessment_id": "AS-cece3e82d8",
+      "assessment_id": "AS-5400a02d77",
       "assumption_id": "BH1",
       "basis": "rule",
       "confidence": "high",
       "conflicting_evidence_ids": [],
       "direction": "weakens",
-      "event_id": "CE-53a30f48fa",
+      "event_id": "CE-a203ea7c33",
       "evidence_ids": [
-        "EV-695a70f12d"
+        "EV-84d71bf55a"
       ],
       "limitations": [],
       "matched_signals": [
@@ -31,7 +31,7 @@
   "cross_batch_transitions": [
     {
       "after_evidence_ids": [
-        "EV-695a70f12d"
+        "EV-84d71bf55a"
       ],
       "after_state": "削弱",
       "assumption_id": "BH1",
@@ -46,24 +46,24 @@
   "filtered": [],
   "meta": {
     "changes_total": 1,
-    "from": 1793774989,
+    "from": 1793779806,
     "incomplete": false,
     "mode": "net_change",
     "monitors_checked": 1,
-    "to": 1793774991,
+    "to": 1793779808,
     "total": 1
   },
   "provenance": {
-    "cdio_base_url": "http://127.0.0.1:37253",
+    "cdio_base_url": "http://127.0.0.1:44851",
     "cdio_version": "0.60.10",
     "data_nature": "public",
-    "fetched_at_utc": "2026-11-04T06:49:54Z",
+    "fetched_at_utc": "2026-11-04T08:10:09Z",
     "input_mode": "live_cdio_api",
     "input_origin": "live_cdio_api",
     "model_judgements": 0,
     "model_layer": "none",
     "model_name": null,
-    "report_sha256": "1d0ef61fbc93c71d3a79392762b70e4043ab86975513e74fb7c5a05927bdc222",
+    "report_sha256": "c528ad94577614de54cc43b101b4f488a4d2d93d7612a7389bc85dcbbb0ad5d1",
     "verification": "deterministic_policy",
     "verification_tool_calls": 0
   },

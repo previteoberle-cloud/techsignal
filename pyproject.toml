@@ -15,12 +15,17 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
+# R4 研究工作台（可选）。核心研判流水线不依赖它。
+ui = ["streamlit>=1.40,<2"]
 
 [project.scripts]
 techsignal = "techsignal.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["techsignal", "techsignal.*"]
+
+[tool.setuptools.package-data]
+"techsignal.workbench" = ["*.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

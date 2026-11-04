@@ -21,5 +21,6 @@
       "browse_url": "https://github.com/tenstorrent/tt-metal/commit/168a956a09755190e9cb46b3556bf7c1314e5ff1"
     }
   ],
-  "verify_policy": "verify_policy.json"
+  "verify_policy": "verify_policy.json",
+  "output_dir": "output"
 }

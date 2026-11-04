@@ -8,24 +8,24 @@
     "unrelated": 0,
     "weakens": 0
   },
-  "cdio_base_url": "http://127.0.0.1:37253",
+  "cdio_base_url": "http://127.0.0.1:44851",
   "cdio_version": "0.60.10",
-  "fetched_at_utc": "2026-11-04T06:49:54Z",
+  "fetched_at_utc": "2026-11-04T08:10:11Z",
   "http_requests": 2,
   "incomplete": false,
   "input_mode": "live_api",
   "note": "输入由 TechSignal 通过 changedetection.io REST API 在线拉取；原始响应保存在 source_changes_report.json",
   "provider": null,
   "provider_is_mock": false,
-  "report_sha256": "aafcaecfb430754a317cfb4c099e055024fc33e883bf39af4216a5a3d91b2ae0",
+  "report_sha256": "8ab34da4b44435e543214a642f197d9e09e06f7c932b5cd72b6d124efa431eed",
   "request_params": {
-    "from": 1793774991,
+    "from": 1793779808,
     "max_lines_per_watch": 2000,
     "page_size": 50,
     "tag": null,
-    "to": 1793774993,
+    "to": 1793779810,
     "uuids": [
-      "2a5df479-cc65-41c1-a702-0726d4d95388"
+      "1617ba1d-4ceb-4717-8d01-da6ce6ee58c5"
     ]
   },
   "techsignal_version": "0.1.0",

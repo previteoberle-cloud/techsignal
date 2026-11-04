@@ -71,8 +71,10 @@ def _verification_statements(a: Assessment, calls_by_id: dict, evidence: dict[st
     v = a.verification
     if not v:
         return []
+    from . import labels as LZ
     out = [Statement(kind=K.TRACE, tool_call_ids=v["call_ids"] or ["(无)"],
-                     text=f"触发原因：{', '.join(v['triggers'])}；规划：{v['planner']}；停止原因：{v['stop_reason']}")]
+                     text=f"触发原因：{'；'.join(LZ.zh(LZ.TRIGGER, t, '其他原因') for t in v['triggers'])}。"
+                          f"规划方式：{LZ.zh(LZ.PLANNER, v['planner'], '其他')}；结束原因：{LZ.zh(LZ.STOP, v['stop_reason'])}")]
     for cid in v["call_ids"]:
         c = calls_by_id.get(cid)
         if c is None:
@@ -80,7 +82,7 @@ def _verification_statements(a: Assessment, calls_by_id: dict, evidence: dict[st
         found = f"，匹配 {sum(len(f['lines']) for f in c.findings)} 行" if c.findings else ""
         err = f"（{c.error}）" if c.error else ""
         out.append(Statement(kind=K.TRACE, tool_call_ids=[cid], evidence_ids=c.evidence_created + c.evidence_reused,
-                             text=f"{cid} {c.tool}：{c.purpose} → {_STATUS_ZH.get(c.status, c.status)}{found}{err}"
+                             text=f"{cid} {LZ.zh(LZ.TOOL, c.tool, '其他工具')}：{c.purpose} → {_STATUS_ZH.get(c.status, '未知状态')}{found}{err}"
                                   + (f"；{c.url}" if c.url else "") + (f"；{c.detail}" if c.detail else "")
                                   + ("；含疑似提示注入的内容已排除" if c.flags else "")))
     for eid in v["evidence_ids"]:
