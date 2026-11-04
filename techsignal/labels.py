@@ -42,7 +42,10 @@ INPUT_ORIGIN = {"live_cdio_api": "在线实测：当时通过 REST API 从真实
                 "file_unverified": "离线文件：来源未经核验"}
 DATA_NATURE = {"public": "真实公开资料", "fictional": "虚构测试数据", "mixed": "部分虚构、部分公开"}
 MODEL_LAYER = {"none": "未使用任何模型：全部由确定性规则判断", "mock_replay": "Mock 回放（人工预置，非真实模型）",
-               "real_model": "真实模型"}
+               "real_model": "真实模型（建议经规则校验）",
+               "real_model_unused": "已配置真实模型，但本次没有成功调用：全部由规则判断"}
+CHANGE_KIND = {"new_fact": "新出现的事实", "removed_record": "原有记录被删除", "negation": "否认或辟谣",
+               "restructure": "文档改版或重排", "unrelated": "与假设无关", "unclear": "无法判断"}
 FILTER_REASON = {"no_net_difference": "前后无净差异", "watch_error": "监测报错", "noise_only": "仅噪声变化",
                  "duplicate": "重复信息"}
 

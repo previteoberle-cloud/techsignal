@@ -241,10 +241,16 @@ def _monitor(store: P.ProjectStore, p: P.Project) -> None:
         st.markdown("#### 手动检查一次")
         st.caption("系统会请 changedetection.io 立即重新抓取本项目的监测项，等待完成后读取新变化。"
                    "没有新快照或没有实质差异时，只记录「本次没有新的变化」，不会生成研判。第一次抓取只建立基线。")
+        use_model = False
+        if M.model_configured():
+            use_model = st.checkbox("规则无法判定的变化，交给已配置的模型服务给出建议（建议仍需通过规则校验）", key="mon_model",
+                                    help="模型服务由运行工作台的人通过环境变量配置（TECHSIGNAL_LLM_*），不在页面中填写密钥。")
+        else:
+            st.caption("未配置模型服务：所有判断由确定性规则作出，规则无法判定的变化列为待人工判断。")
         if st.button("立即检查一次并研判", key="mon_check", type="primary"):
             with st.spinner("正在请 changedetection.io 重新抓取并等待结果（最多约 90 秒）…"):
                 try:
-                    rec = M.check_now(store, p.project_id, M.client_for(url, key, timeout=30))
+                    rec = M.check_now(store, p.project_id, M.client_for(url, key, timeout=30), use_model=use_model)
                 except P.ProjectError as e:
                     st.error(str(e))
                     rec = None

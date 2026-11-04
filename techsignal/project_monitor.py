@@ -277,8 +277,14 @@ def _wait_for_check(client: ChangeDetectionClient, uuid: str, before: dict, dead
         sleep(1.0)
 
 
+def model_configured() -> bool:
+    """An OpenAI-compatible model service configured by the operator (environment, never the UI)."""
+    import os
+    return bool(os.getenv("TECHSIGNAL_LLM_BASE_URL") and os.getenv("TECHSIGNAL_LLM_MODEL"))
+
+
 def check_now(store: P.ProjectStore, project_id: str, client: ChangeDetectionClient, wait: float = DEFAULT_WAIT,
-              sleep: Callable[[float], None] = time.sleep) -> CheckRecord:
+              sleep: Callable[[float], None] = time.sleep, use_model: bool = False) -> CheckRecord:
     """Re-check the project's watches once and assess real new changes. Never fabricates a result:
     without a new snapshot or with no net difference, nothing is assessed and the record says so."""
     from .cli import main as cli_main
@@ -344,7 +350,9 @@ def check_now(store: P.ProjectStore, project_id: str, client: ChangeDetectionCli
         rc = cli_main(["run", "--cdio-url", client.base_url, "--from", str(cursor), "--to", str(latest),
                        "--uuids", ",".join(uuids), "--max-lines", "2000", "--track-history",
                        "--theses", str(store.theses_path(project_id)), "--sources", str(store.sources_path(project_id)),
-                       "--out", str(state_dir)], api_key=api_key, stream=buf)
+                       "--out", str(state_dir)]
+                      + (["--provider", "openai-compatible"] if use_model and model_configured() else []),
+                      api_key=api_key, stream=buf)
         if rc != 0:
             lines = buf.getvalue().strip().splitlines()
             return finish("failed", f"研判流水线失败：{lines[-1] if lines else '未知错误'}", from_ts=cursor, to_ts=latest)

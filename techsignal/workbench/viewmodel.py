@@ -407,7 +407,7 @@ def timeline(case: CaseRef, runs: list[RunView]) -> list[dict]:
 
 SOURCE_ZH = {
     "rule": "确定性规则",
-    "model_validated": "真实模型建议（已通过结构、引用与证据等级校验）",
+    "model_validated": "模型服务建议（已通过结构、引用、变化类型与证据等级校验）",
     "model_rejected": "模型建议未通过校验，已按规则保守处理",
     "model_failed": "模型调用失败，已降级为规则结果",
     "model_skipped": "超出本次模型调用上限，按规则保守处理",
@@ -443,6 +443,8 @@ def explain(run: RunView, a: dict) -> dict:
     row = run.judgement_row(a)
     src = judgement_source(a)
     source = SOURCE_ZH.get(src, "确定性规则")
+    if src in ("model_validated", "model_rejected", "model_failed") and a.get("provider_name"):
+        source += f"｜{a['provider_name']}"
     if a["direction"] == "insufficient":
         source += "；证据不足，需要人工判断"
     evs = [run.evidence_view(e) for e in row["evidence_ids"]]
@@ -465,12 +467,15 @@ def explain(run: RunView, a: dict) -> dict:
     for g in a.get("gate_log", []):
         if g not in gates:
             gates.append(g)
+    if a.get("change_kind"):
+        gates.insert(1, f"模型对变化类型的判断：{L.zh(L.CHANGE_KIND, a['change_kind'], a['change_kind'])}")
     gates.append("研究判断保持不变：系统只给出建议，不会修改你的结论")
     review = a.get("review_status") or ("pending_human" if a["direction"] in ("weakens", "insufficient") else "not_required")
     return {
         "assumption": row["assumption"], "state": row["state"], "source": source, "source_code": src,
         "confidence": row["confidence"], "what": "；".join(what) or "（变化内容见证据）",
-        "why": list(a.get("rationale", [])) or ["（无）"], "model": a.get("model_rationale"),
+        "why": list(a.get("rationale", [])) or ["（无）"],
+        "model": a.get("model_rationale") or (a.get("model_suggestion") or {}).get("rationale"),
         "gates": gates, "unresolved": [q for q in a.get("open_questions", []) if q],
         "action": a.get("recommended_action", ""), "review": REVIEW_ZH.get(review, "待人工复核"),
         "evidence": evs,

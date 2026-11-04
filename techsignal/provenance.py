@@ -14,7 +14,7 @@ import hashlib
 import json
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_serializer
 
 from .models import Basis, Thesis, canonical_json
 
@@ -33,11 +33,23 @@ class RunProvenance(BaseModel):
     cdio_version: str | None = None
     fetched_at_utc: str | None = None
     report_sha256: str | None = None
-    model_layer: Literal["none", "mock_replay", "real_model"] = "none"
+    # real_model_unused (R6): a real provider was configured but no call succeeded in this run
+    model_layer: Literal["none", "mock_replay", "real_model", "real_model_unused"] = "none"
     model_name: str | None = None
     model_judgements: int = 0
     verification: Literal["off", "deterministic_policy"] = "off"
     verification_tool_calls: int = 0
+    # R6: what the model layer actually did (ProviderUsage), and the protocol used. Omitted while unset.
+    model_usage: dict | None = None
+    model_protocol: str | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_r6(self, handler):
+        data = handler(self)
+        for k in ("model_usage", "model_protocol"):
+            if data.get(k) is None:
+                data.pop(k, None)
+        return data
 
 
 def report_sha256(report: dict) -> str:
@@ -80,7 +92,14 @@ def with_model_usage(p: RunProvenance, provider, assessments) -> RunProvenance:
         layer, name = "none", None
     else:
         layer, name = ("mock_replay" if provider.is_mock else "real_model"), provider.name
-    return p.model_copy(update={"model_layer": layer, "model_name": name, "model_judgements": used})
+    upd = {"model_layer": layer, "model_name": name, "model_judgements": used}
+    usage = getattr(provider, "usage", None)
+    if provider is not None and usage is not None and getattr(provider, "protocol", "single") == "multi":
+        upd["model_usage"] = usage.model_dump()
+        upd["model_protocol"] = "multi"
+        if not provider.is_mock and usage.calls_succeeded == 0:
+            layer = upd["model_layer"] = "real_model_unused"
+    return p.model_copy(update=upd)
 
 
 _NATURE_ZH = {"fictional": "虚构测试数据（研究判断均标注为虚构）", "public": "真实公开资料",
@@ -105,8 +124,19 @@ def disclaimers(p: RunProvenance) -> list[str]:
     elif p.model_layer == "mock_replay":
         out.append(f"模型层：Mock 回放（{p.model_name}），共 {p.model_judgements} 条判断来自人工预置的回放数据，"
                    "不是真实大模型推理；标注「Mock 回放」的判断即是。")
+    elif p.model_layer == "real_model_unused":
+        u = p.model_usage or {}
+        out.append(f"模型层：已配置 {p.model_name}，但本次没有成功的模型调用（发出 {u.get('calls_attempted', 0)} 次，"
+                   f"失败 {u.get('calls_failed', 0)} 次，因上限跳过 {u.get('calls_skipped_budget', 0)} 次）；"
+                   "所有判断由确定性规则作出，规则无法判定的列为待核实。")
     else:
-        out.append(f"模型层：{p.model_name}，共 {p.model_judgements} 条判断来自该模型，标注「模型推断」。")
+        out.append(f"模型层：{p.model_name}，共 {p.model_judgements} 条判断来自该模型的建议（经规则校验），标注「模型推断」。")
+        if p.model_usage:
+            u = p.model_usage
+            out.append(f"模型调用：发出 {u.get('calls_attempted', 0)} 次，成功 {u.get('calls_succeeded', 0)} 次，"
+                       f"失败 {u.get('calls_failed', 0)} 次，因上限跳过 {u.get('calls_skipped_budget', 0)} 次"
+                       + (f"；服务报告的用量 {u.get('total_tokens', 0)} tokens" if u.get("usage_reported") else
+                          "；服务未报告用量") + "。")
     if p.verification == "deterministic_policy":
         out.append(f"补证：由确定性策略触发并选择工具，共实际执行 {p.verification_tool_calls} 次工具调用"
                    "（HTTP 请求，地址与结果见 verification_trace.json）；没有使用大模型决策。")

@@ -275,3 +275,60 @@ def test_private_urls_only_with_the_explicit_opt_in(tmp_path, monkeypatch):
     assert s.allow_private_urls and s.create(_spec(urls="http://127.0.0.1:8000/page"), ready=True)
     with pytest.raises(P.ProjectError):           # scheme and credential checks still apply
         P.check_public_url("file:///etc/passwd", allow_private=True)
+
+
+# ---------------------------------------------------------------- Checkpoint 3: optional model -------
+
+def test_project_check_with_a_configured_model_service(cdio, store, monkeypatch):
+    """The operator configured an OpenAI-compatible service (here a local PROTOCOL STUB that echoes
+    the allowed evidence id). The project run records the model suggestion, the gates and usage."""
+    import re
+    import threading as th
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            ev = re.search(r"可引用的证据编号：(EV-[0-9a-f]+)", body["messages"][1]["content"]).group(1)
+            content = json.dumps({"assessments": [{"assumption_id": "A1", "change_kind": "new_fact",
+                                                   "direction": "weakens", "rationale": "协议桩预置回答",
+                                                   "cited_evidence_ids": [ev], "confidence": "medium"}]})
+            data = json.dumps({"choices": [{"message": {"content": content}}],
+                               "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}}).encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), H)
+    th.Thread(target=httpd.serve_forever, daemon=True).start()
+    monkeypatch.setenv("TECHSIGNAL_LLM_BASE_URL", f"http://127.0.0.1:{httpd.server_address[1]}/v1")
+    monkeypatch.setenv("TECHSIGNAL_LLM_MODEL", "protocol-stub")
+    monkeypatch.setenv("TECHSIGNAL_LLM_API_KEY", "sk-llm-SECRET")
+    try:
+        p, c = _linked(store, cdio)
+        M.check_now(store, p.project_id, c)
+        cdio.pages[PAGE] = V1 + "| Llama 3.3 | Galaxy (Blackhole) | 30 t/s |\n"      # topic hit, no signal
+        r = M.check_now(store, p.project_id, c, use_model=True)
+        d = M.run_dir(store, p.project_id, r.run_id)
+        run = vm.load_run(d, d / "theses.json")
+        a = run.assessments()[0]
+        assert (a["direction"], a["basis"], a["judgement_source"]) == ("weakens", "model", "model_validated")
+        assert a["model_suggestion"]["rationale"] == "协议桩预置回答" and a["review_status"] == "pending_human"
+        x = vm.explain(run, a)
+        assert "模型服务建议" in x["source"] and "protocol-stub" in x["source"] and x["model"] == "协议桩预置回答"
+        assert run.provenance["model_usage"]["total_tokens"] == 15
+        for f in store.project_dir(p.project_id).rglob("*"):
+            if f.is_file():
+                assert "sk-llm-SECRET" not in f.read_text(encoding="utf-8", errors="replace")
+        # without use_model the same kind of change stays with the rules
+        cdio.pages[PAGE] += "| Qwen 2.5 | Galaxy (Blackhole) | 40 t/s |\n"
+        r2 = M.check_now(store, p.project_id, c)
+        d2 = M.run_dir(store, p.project_id, r2.run_id)
+        a2 = vm.load_run(d2, d2 / "theses.json").assessments()[0]
+        assert a2["basis"] == "rule" and a2["direction"] == "insufficient"
+    finally:
+        httpd.shutdown()
+        httpd.server_close()

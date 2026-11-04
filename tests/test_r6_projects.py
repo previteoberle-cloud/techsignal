@@ -84,7 +84,7 @@ def test_generated_thesis_drives_the_real_pipeline(store):
         "uuid": "11111111-1111-4111-8111-111111111111", "title": "Tenstorrent tt-metal README",
         "url": "https://github.com/tenstorrent/tt-metal", "changes": 1, "new_in_period": False,
         "no_net_difference": False, "error": None, "from_timestamp": 1, "to_timestamp": 2,
-        "diff": "--- a\n+++ b\n@@ -1 +1,2 @@\n Models\n+| Llama 3.1 70B | QuietBox (Blackhole) | 15 t/s |",
+        "diff": "--- 2026-10-01T00:00:00Z\n+++ 2026-10-02T00:00:00Z\n@@ -1 +1,2 @@\n Models\n+| Llama 3.1 70B | QuietBox (Blackhole) | 15 t/s |",
         "truncated": False}]}
     res = run_pipeline(report, load_theses(store.theses_path(p.project_id)),
                        SourceRegistry.load(store.sources_path(p.project_id)), persist=False)
