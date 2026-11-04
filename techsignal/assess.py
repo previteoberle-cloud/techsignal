@@ -79,6 +79,7 @@ def _from_model(event, t, evidence, match, outcome, provider, stats) -> Assessme
     notes = list(outcome.reasons)
     if provider is None:
         return _new(event, thesis, evidence, direction=Direction.INSUFFICIENT, basis=Basis.RULE,
+                    assumption_id=outcome.assumption_id,
                     rationale=notes + ["规则层无法判定，且未配置模型 Provider"],
                     matched_signals=[s.describe() for s in outcome.signals],
                     open_questions=["需要人工阅读变化原文，判断其与关键假设的关系"])
@@ -96,7 +97,7 @@ def _from_model(event, t, evidence, match, outcome, provider, stats) -> Assessme
     except ProviderError as e:
         stats.provider_failures += 1
         return _new(event, thesis, evidence, direction=Direction.INSUFFICIENT, basis=Basis.RULE,
-                    provider_name=provider.name,
+                    provider_name=provider.name, assumption_id=outcome.assumption_id,
                     rationale=notes + [f"模型层调用失败（{e}），按证据不足处理"],
                     matched_signals=[s.describe() for s in outcome.signals],
                     limitations=["本条未获得模型层判断"],
@@ -107,6 +108,7 @@ def _from_model(event, t, evidence, match, outcome, provider, stats) -> Assessme
         stats.provider_rejections += 1
         return _new(event, thesis, evidence, direction=Direction.INSUFFICIENT, basis=Basis.RULE,
                     provider_name=provider.name, tentative_direction=j.direction,
+                    assumption_id=outcome.assumption_id,
                     rationale=notes + [f"模型层输出未通过校验，已拒绝：{reason}"],
                     matched_signals=[s.describe() for s in outcome.signals],
                     limitations=["模型层输出被拒绝，本条结论退回为证据不足"],
@@ -239,3 +241,72 @@ def recommend(a: Assessment) -> Assessment:
     else:
         text = "无需动作"
     return a.model_copy(update={"recommended_action": text})
+
+
+# ---------------------------------------------------------------------------
+# Cross-batch (R2 / P3): compare with the judgement history of earlier runs
+# ---------------------------------------------------------------------------
+
+_DIR_ZH = {Direction.SUPPORTS: "支持", Direction.WEAKENS: "削弱", Direction.UNRELATED: "无关",
+           Direction.INSUFFICIENT: "证据不足"}
+
+
+def _state_zh(direction: Direction, tentative: Direction | None) -> str:
+    text = _DIR_ZH[direction]
+    if tentative and tentative != direction:
+        text += f"（初步指向{_DIR_ZH[tentative]}）"
+    return text
+
+
+def resolve_cross_batch(assessments: list[Assessment], history: list, stats: AssessStats) -> tuple[list, list]:
+    """Check this run's assessments against the latest recorded state of the same assumption.
+
+    - Opposite effective directions (supports vs weakens) across batches: this run's assessment is
+      downgraded to INSUFFICIENT and the earlier evidence is listed as conflicting. The earlier
+      record is not rewritten; it stays in the history as it was.
+    - Every assumption touched by this run gets a transition (before -> after, with the reason), so
+      the brief can say why the judgement moved, or why it did not.
+    Returns (assessments, transitions).
+    """
+    from .models import JudgementTransition
+
+    latest: dict[tuple, object] = {}
+    for rec in history:
+        if rec.thesis_id and rec.assumption_id and rec.direction != Direction.UNRELATED:
+            latest[(rec.thesis_id, rec.assumption_id)] = rec  # history is in run order
+
+    out = list(assessments)
+    transitions = []
+    for i, a in enumerate(out):
+        if not (a.thesis_id and a.assumption_id) or a.direction == Direction.UNRELATED:
+            continue
+        before = latest.get((a.thesis_id, a.assumption_id))
+        now = _effective(a)
+        if before is None:
+            kind, why = "first", "该假设首次出现相关证据"
+        else:
+            then = before.direction if before.direction in (Direction.SUPPORTS, Direction.WEAKENS) else before.tentative_direction
+            if now and then and now != then:
+                stats.conflicts += 1
+                out[i] = a = a.model_copy(update={
+                    "tentative_direction": now, "direction": Direction.INSUFFICIENT, "confidence": "low",
+                    "conflicting_evidence_ids": list(dict.fromkeys(a.conflicting_evidence_ids + before.evidence_ids)),
+                    "limitations": a.limitations + ["与历史批次的证据方向相反，系统不自动裁决"],
+                    "open_questions": a.open_questions + [
+                        f"跨批次冲突：批次 {before.run_id} 的 {', '.join(before.evidence_ids)}（{before.source_name}，等级 "
+                        f"{before.evidence_grade}）指向{_DIR_ZH[then]}，本批次指向{_DIR_ZH[now]}。需核实哪一方属实"],
+                })
+                kind, why = "conflict", "新证据与历史证据方向相反，两者均需核实"
+            elif now and then and now == then:
+                kind, why = "reinforced", "新证据与历史判断方向一致"
+            elif a.direction == Direction.INSUFFICIENT and not now:
+                kind, why = "unresolved", "新变化涉及该假设但无法判定方向（如相关内容被删除、处于否定语境），保留历史判断并标记待核实"
+            else:
+                kind, why = "changed", "判断状态发生变化"
+        transitions.append(JudgementTransition(
+            thesis_id=a.thesis_id, assumption_id=a.assumption_id, kind=kind, explanation=why,
+            before_state=_state_zh(before.direction, before.tentative_direction) if before else "无历史记录",
+            before_evidence_ids=list(before.evidence_ids) if before else [],
+            before_run_id=before.run_id if before else None,
+            after_state=_state_zh(a.direction, a.tentative_direction), after_evidence_ids=list(a.evidence_ids)))
+    return out, transitions

@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 
 from pydantic import TypeAdapter, ValidationError
 
-from .models import Evidence, EvidenceGrade, SourceProfile, SourceType, Thesis
+from .models import Evidence, EvidenceGrade, JudgementRecord, SourceProfile, SourceType, Thesis
 
 
 class StoreError(ValueError):
@@ -153,3 +153,26 @@ class EvidenceLedger:
 
     def __len__(self) -> int:
         return len(self._items)
+
+
+class JudgementHistory:
+    """judgements.jsonl: one line per assessment, appended per run, never rewritten (R2)."""
+
+    def __init__(self, path: Path | None = None):
+        self.records: list[JudgementRecord] = []
+        self._text = ""
+        if path and Path(path).exists():
+            self._text = Path(path).read_text(encoding="utf-8")
+            for n, line in enumerate(self._text.splitlines(), 1):
+                if line.strip():
+                    try:
+                        self.records.append(JudgementRecord.model_validate_json(line))
+                    except ValidationError as e:
+                        raise StoreError(f"研判历史 {path} 第 {n} 行无效：{e.errors()[0]['msg']}") from None
+            if self._text and not self._text.endswith("\n"):
+                self._text += "\n"
+
+    def serialize_with(self, new: list[JudgementRecord]) -> str:
+        seen = {(r.run_id, r.assessment_id) for r in self.records}
+        lines = [r.model_dump_json() + "\n" for r in new if (r.run_id, r.assessment_id) not in seen]
+        return self._text + "".join(lines)

@@ -121,7 +121,7 @@ def _item(a: Assessment, ev: Evidence, event: ChangeEvent, th: Thesis, evidence:
 
 def build_brief(meta: dict, events: list[ChangeEvent], evidence: dict[str, Evidence],
                 assessments: list[Assessment], filtered: list[FilteredEvent], theses: list[Thesis],
-                provider_name: str | None, provider_is_mock: bool) -> Brief:
+                provider_name: str | None, provider_is_mock: bool, transitions: list | None = None) -> Brief:
     ev_by_id = {e.event_id: e for e in events}
     th_by_id = {t.thesis_id: t for t in theses}
 
@@ -160,7 +160,16 @@ def build_brief(meta: dict, events: list[ChangeEvent], evidence: dict[str, Evide
         "insufficient": sum(a.direction == Direction.INSUFFICIENT for a in assessments),
         "unrelated": sum(a.direction == Direction.UNRELATED for a in assessments),
     }
-    return Brief(title=f"TechSignal 研究速览｜{iso(meta['from'])[:10]} 至 {iso(meta['to'])[:10]}",
+    kind_zh = {"first": "首次出现证据", "reinforced": "得到强化", "conflict": "出现跨批次冲突",
+               "unresolved": "新变化无法定向，保留原判断待核实", "changed": "状态变化"}
+    trans = [Statement(kind=K.INFERENCE, basis=Basis.RULE,
+                       evidence_ids=list(dict.fromkeys(t.before_evidence_ids + t.after_evidence_ids)),
+                       thesis_ids=[t.thesis_id],
+                       text=(f"{t.thesis_id}·{t.assumption_id}：{kind_zh[t.kind]}。之前：{t.before_state}"
+                             + (f"（批次 {t.before_run_id}）" if t.before_run_id else "")
+                             + f" → 现在：{t.after_state}。原因：{t.explanation}；研究结论本身未被修改"))
+             for t in (transitions or [])]
+    return Brief(transitions=trans, title=f"TechSignal 研究速览｜{iso(meta['from'])[:10]} 至 {iso(meta['to'])[:10]}",
                  period_from=meta["from"], period_to=meta["to"], items=items, unrelated=unrelated,
                  filtered=filtered, disclaimers=disclaimers, mock_used=mock_used, stats=stats)
 
@@ -209,6 +218,11 @@ def render_markdown(brief: Brief) -> str:
             out.append(f"**{title}**")
             out += [render_statement(s) for s in getattr(item, attr)]
             out.append("")
+
+    if brief.transitions:
+        out += ["## 跨批次判断变化", ""]
+        out += [render_statement(s) for s in brief.transitions]
+        out.append("")
 
     out += ["## 与研究判断无关的变化", ""]
     out += [render_statement(s) for s in brief.unrelated] or ["无"]

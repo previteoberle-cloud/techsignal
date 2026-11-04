@@ -17,7 +17,7 @@ from pathlib import Path
 
 from .models import Brief, canonical_json
 from .providers import MockReplayProvider, OpenAICompatibleProvider
-from .store import EvidenceLedger, SourceRegistry, load_theses
+from .store import EvidenceLedger, JudgementHistory, SourceRegistry, load_theses
 from .validate import validate_brief, validate_markdown
 
 
@@ -33,7 +33,7 @@ def _provider(args):
 
 # The ledger lands first and the human-facing brief.md last. Live runs add their captured input and
 # run record in front of these.
-COMMIT_ORDER = ("evidence.jsonl", "decision_log.json", "brief.json", "brief.md")
+COMMIT_ORDER = ("evidence.jsonl", "judgements.jsonl", "decision_log.json", "brief.json", "brief.md")
 LIVE_FILES = ("source_changes_report.json", "run_record.json")
 
 
@@ -86,9 +86,11 @@ def _fetch_live(args) -> tuple[dict, dict]:
                                    timeout=args.timeout)
     info = client.system_info()
     params = {"from": args.from_ts, "to": args.to_ts, "tag": args.tag,
-              "uuids": args.uuids.split(",") if args.uuids else None, "page_size": args.page_size}
+              "uuids": args.uuids.split(",") if args.uuids else None, "page_size": args.page_size,
+              "max_lines_per_watch": args.max_lines}
     report = client.get_changes_report(from_ts=args.from_ts, to_ts=args.to_ts, tag=args.tag,
-                                       uuids=params["uuids"], page_size=args.page_size)
+                                       uuids=params["uuids"], page_size=args.page_size,
+                                       max_lines_per_watch=args.max_lines)
     record = {
         "input_mode": "live_api",
         "note": "输入由 TechSignal 通过 changedetection.io REST API 在线拉取；原始响应保存在 source_changes_report.json",
@@ -120,17 +122,22 @@ def cmd_run(args) -> int:
             source = Path(args.changes).read_text(encoding="utf-8")
         # Nothing under `out` is touched until the run has fully succeeded. Without --append-ledger
         # the ledger simply starts empty in memory; the old file is replaced only at commit time.
-        ledger = EvidenceLedger(out / "evidence.jsonl" if args.append_ledger else None)
+        keep_state = args.append_ledger or args.track_history
+        ledger = EvidenceLedger(out / "evidence.jsonl" if keep_state else None)
+        history = JudgementHistory(out / "judgements.jsonl") if args.track_history else None
         provider = _provider(args)
         result = run_pipeline(
             source, load_theses(Path(args.theses)), SourceRegistry.load(Path(args.sources)),
-            provider=provider, ledger=ledger, persist=False)
+            provider=provider, ledger=ledger, persist=False,
+            history=history.records if history is not None else None)
         files = {
             "evidence.jsonl": ledger.serialize(),
             "decision_log.json": canonical_json(result.decision_log()) + "\n",
             "brief.json": canonical_json(result.brief.model_dump(mode="json")) + "\n",
             "brief.md": result.markdown,
         }
+        if history is not None:
+            files["judgements.jsonl"] = history.serialize_with(result.new_records)
         if record is not None:
             record.update(provider=result.provider_name, provider_is_mock=bool(provider and provider.is_mock),
                           brief_stats=result.brief.stats)
@@ -199,6 +206,9 @@ def main(argv=None) -> int:
     r.add_argument("--replay", help="Mock 回放文件（--provider mock）")
     r.add_argument("--out", required=True)
     r.add_argument("--append-ledger", action="store_true", help="保留已有证据台账（用于跨批次去重）")
+    r.add_argument("--track-history", action="store_true",
+                   help="跨批次模式：保留证据台账与研判历史 judgements.jsonl，并与历史判断比对")
+    r.add_argument("--max-lines", type=int, default=200, help="在线模式：每个监测项最多返回的差异行数")
     r.set_defaults(func=cmd_run)
 
     v = sub.add_parser("validate", help="校验已生成简报的引用完整性")

@@ -55,6 +55,22 @@ Tenstorrent 新一代 AI 加速芯片 **Blackhole** 的大模型推理软件支�
 - **新证据出现后：**结论中「没有 70B 级模型记录」这一具体依据不再成立，所以假设 BH1 被削弱。但新数据仍带 `*`，「仍处早期」的整体判断还没有被推翻。
 - **处理方式：**TechSignal 给出「建议研究负责人复核」，研究判断状态保持 `active`，等人工决定。
 
+## 跨批次跟踪（真实数据）
+
+[`case_cross_batch.json`](case_cross_batch.json) 增加了第三个真实版本：[`62f3cd0`](https://github.com/tenstorrent/tt-metal/commit/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46)（2025-08-12，「Add Featured Models list」）。这一版把 README 的完整模型表改成了精选列表，Blackhole 70B 条目不再出现，8B 条目和 `*` 脚注仍然保留。
+
+| 批次 | 版本 | 系统研判 | 跨批次说明 |
+|---|---|---|---|
+| 1 | `4cd196f → 168a956` | BH1 被削弱（规则层，A 级） | 首次出现证据 |
+| 2 | `168a956 → 62f3cd0` | 证据不足：削弱信号出现在**被删除**的内容中，规则层不判方向 | 「之前：削弱 → 现在：证据不足；保留历史判断并标记待核实」，研究结论未改 |
+
+**分级：**
+- **事实：** 批次 2 的 README 中不再出现 Blackhole 70B 条目。
+- **待核实：** 这是撤回支持，还是因为精选列表只保留部分模型？需要看发布说明，或核查当时的模型目录。
+- 系统没有在这一点上下结论，这正是预期行为。
+
+输出：[`output_cross_batch/`](output_cross_batch/)。`batch1/` 和 `batch2/` 分别是两个批次处理后的状态快照，`state/` 是累积状态，`observation_record.json` 记录三个版本的提交号和抓取时间。
+
 ## 复现
 
 只做离线回放，不需要网络，也不需要 changedetection.io：

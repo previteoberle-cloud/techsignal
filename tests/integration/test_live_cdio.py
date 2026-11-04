@@ -92,3 +92,15 @@ def test_live_cdio_real_public_case(tmp_path):
     # same published versions -> same evidence content (ids depend on fetch times, so compare excerpts)
     pick = lambda t: [(json.loads(x)["excerpt_added"], json.loads(x)["excerpt_removed"]) for x in t.splitlines()]  # noqa: E731
     assert pick(fresh) == pick(committed)
+
+
+@pytest.mark.skipif(os.getenv("TECHSIGNAL_LIVE_NETWORK") != "1", reason="set TECHSIGNAL_LIVE_NETWORK=1 (needs GitHub)")
+def test_live_cdio_real_cross_batch_case(tmp_path):
+    from techsignal.live import run_cross_batch_case
+    case = ROOT / "cases" / "tenstorrent_blackhole" / "case_cross_batch.json"
+    out = tmp_path / "cb"
+    assert run_cross_batch_case(PY, case, out, log_path=tmp_path / "cdio.log") == 0
+    b1 = json.loads((out / "batch1" / "decision_log.json").read_text(encoding="utf-8"))
+    b2 = json.loads((out / "batch2" / "decision_log.json").read_text(encoding="utf-8"))
+    assert [a["direction"] for a in b1["assessments"]] == ["weakens"]
+    assert [t["kind"] for t in b2["cross_batch_transitions"]] == ["unresolved"]

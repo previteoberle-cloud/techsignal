@@ -1,0 +1,44 @@
+{
+  "case_id": "tenstorrent-blackhole-70b-cross-batch",
+  "note": "真实 changedetection.io 实例依次抓取下列已发布版本；各批次按顺序以 --track-history 处理。快照时间戳是抓取时间，发布日期取自 git 提交记录。",
+  "changedetection_version": "0.60.10",
+  "watch_uuid": "99a85885-68fe-485e-b34e-f773d5453407",
+  "batches": [
+    {
+      "batch": 1,
+      "from_version": "4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1",
+      "to_version": "168a956a09755190e9cb46b3556bf7c1314e5ff1"
+    },
+    {
+      "batch": 2,
+      "from_version": "168a956a09755190e9cb46b3556bf7c1314e5ff1",
+      "to_version": "62f3cd0a4ff2e82d01af500eb5800cfcb6703d46"
+    }
+  ],
+  "observations": [
+    {
+      "label": "Blackhole 70B 条目加入前",
+      "commit": "4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1",
+      "commit_date": "2025-07-11T16:33:05+00:00",
+      "url": "https://raw.githubusercontent.com/tenstorrent/tt-metal/4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1/README.md",
+      "browse_url": "https://github.com/tenstorrent/tt-metal/blob/4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1/README.md",
+      "snapshot_timestamp": 1793772615
+    },
+    {
+      "label": "加入 Llama 3.1 70B (TP=4) QuietBox (Blackhole) 条目",
+      "commit": "168a956a09755190e9cb46b3556bf7c1314e5ff1",
+      "commit_date": "2025-07-11T17:16:57+00:00",
+      "url": "https://raw.githubusercontent.com/tenstorrent/tt-metal/168a956a09755190e9cb46b3556bf7c1314e5ff1/README.md",
+      "browse_url": "https://github.com/tenstorrent/tt-metal/commit/168a956a09755190e9cb46b3556bf7c1314e5ff1",
+      "snapshot_timestamp": 1793772617
+    },
+    {
+      "label": "README 改为 Featured Models 列表；Blackhole 70B 条目不再出现",
+      "commit": "62f3cd0a4ff2e82d01af500eb5800cfcb6703d46",
+      "commit_date": "2025-08-12T19:40:39+00:00",
+      "url": "https://raw.githubusercontent.com/tenstorrent/tt-metal/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46/README.md",
+      "browse_url": "https://github.com/tenstorrent/tt-metal/commit/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46",
+      "snapshot_timestamp": 1793772619
+    }
+  ]
+}

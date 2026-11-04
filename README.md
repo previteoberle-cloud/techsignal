@@ -2,7 +2,7 @@
 
 TechSignal 读取 [changedetection.io](https://github.com/dgtlmoon/changedetection.io) 输出的网页变化数据，判断这些变化对**既有研究判断**的影响，并生成带证据编号、可校验的中文管理层速览。
 
-> **状态说明：** R1 是可运行的研究原型，不是具备自主研究能力的 Agent。规则层、证据台账、简报生成和引用校验是真实运行的。模型层目前只接了 **Mock 回放**（人工预置），没有调用过任何真实大模型。输入是离线 Fixture，没有接入在线 changedetection.io 服务。全部演示与测试数据都是**虚构**的。
+> **状态说明（R2）：** 规则层、证据台账、简报、引用校验、changedetection.io API Client 和跨批次历史都已真实运行。已对真实运行的 changedetection.io 实例和真实公开来源（Tenstorrent 官方 GitHub 仓库的提交历史）完成在线验证，本会话和 GitHub Actions 两处都已验证。模型层**尚未接入任何真实大模型**：只有 Mock 回放，以及对本地协议桩的 HTTP 验证。虚构场景只用来验证逻辑。详见 [docs/R2_ACCEPTANCE.md](docs/R2_ACCEPTANCE.md)。
 
 ## 与 changedetection.io 的分工
 
@@ -83,6 +83,25 @@ python -m techsignal.fixtures --check
 
 `--provider openai-compatible` 会读取以下三个环境变量：`TECHSIGNAL_LLM_BASE_URL`（例如 `http://localhost:11434/v1`）、`TECHSIGNAL_LLM_MODEL` 和 `TECHSIGNAL_LLM_API_KEY`。这个 Provider 在 R1 中只用注入的假传输层测过请求构造和响应解析，**没有对任何真实模型服务运行过**。
 
+## 在线使用：连接 changedetection.io
+
+```bash
+export TECHSIGNAL_CDIO_API_KEY=...   # changedetection.io 设置页中的 API key；只从环境变量读取
+python -m techsignal run --cdio-url http://localhost:5000 --from 1790812800 --theses my/theses.json --sources my/sources.json --out out/
+```
+
+可选参数：`--to`、`--tag`、`--uuids`、`--page-size`、`--max-lines`、`--timeout`。在线模式会额外写出 `source_changes_report.json`（原始响应）和 `run_record.json`（地址、参数、拉取时间、响应 sha256，不含密钥）。
+
+加上 `--track-history` 进入跨批次模式：证据台账和 `judgements.jsonl` 会累积；新证据与同一假设的历史判断方向相反时，降级并列出冲突证据；简报会说明每个假设「之前 → 现在」的变化，研究结论本身不会被改动。
+
+真实实例端到端（需要装有 changedetection.io 依赖的 Python）：
+
+```bash
+python -m techsignal.live --python /path/to/python --case cases/tenstorrent_blackhole/case.json --out /tmp/out
+```
+
+真实公开案例：[cases/tenstorrent_blackhole/](cases/tenstorrent_blackhole/README.md)。
+
 ## changedetection.io 数据契约
 
 适配器解析的是 `GET /api/v1/changes?format=json` 的返回。契约依据：
@@ -115,7 +134,7 @@ Markdown 层还会检查：所有 `[EV-…]`、`[TH-…]` 都能追溯到证据�
 
 ## 测试
 
-共 90 个测试，包括 23 个相互独立的虚构场景（`tests/scenarios/`），其中 S21–S23 和 `test_r11_*.py` 为 R1.1 新增的反例回归测试。场景覆盖：有效变化、支持、削弱、两类无关、两类噪声、两类重复、来源冲突、低等级证据、无信号、Mock 判定、模型错误引用、模型缺失、否定语境、无净差异、截断加报错，以及三类异常输入。各场景的结果见 [docs/R1_ACCEPTANCE.md](docs/R1_ACCEPTANCE.md)。
+离线测试共 137 个，另有 3 个需显式开启的在线测试（`tests/integration/`，需要真实的 changedetection.io）。离线测试包括 23 个虚构场景（S21–S23 和 `test_r11_*.py` 为 R1.1 反例回归），以及 R2 新增的 API Client、真实案例回放、模型协议、跨批次测试。场景覆盖：有效变化、支持、削弱、两类无关、两类噪声、两类重复、来源冲突、低等级证据、无信号、Mock 判定、模型错误引用、模型缺失、否定语境、无净差异、截断加报错，以及三类异常输入。各场景的结果见 [docs/R1_ACCEPTANCE.md](docs/R1_ACCEPTANCE.md)。
 
 评测指标只说明代码行为与人工标注的预期一致。场景和预期都由开发者编写，**不代表真实世界的准确率**。
 

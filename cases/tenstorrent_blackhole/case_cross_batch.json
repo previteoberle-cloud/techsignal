@@ -1,0 +1,41 @@
+{
+  "case_id": "tenstorrent-blackhole-70b-cross-batch",
+  "title": "Tenstorrent Blackhole：跨批次跟踪（70B 条目加入后又在 README 重排中消失）",
+  "data_kind": "真实公开资料（按提交固定的已发布版本）",
+  "watch_title": "Tenstorrent tt-metal README（官方 GitHub）",
+  "theses": "theses.json",
+  "sources": "sources.json",
+  "versions": [
+    {
+      "label": "Blackhole 70B 条目加入前",
+      "commit": "4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1",
+      "commit_date": "2025-07-11T16:33:05+00:00",
+      "url": "https://raw.githubusercontent.com/tenstorrent/tt-metal/4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1/README.md",
+      "browse_url": "https://github.com/tenstorrent/tt-metal/blob/4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1/README.md"
+    },
+    {
+      "label": "加入 Llama 3.1 70B (TP=4) QuietBox (Blackhole) 条目",
+      "commit": "168a956a09755190e9cb46b3556bf7c1314e5ff1",
+      "commit_date": "2025-07-11T17:16:57+00:00",
+      "url": "https://raw.githubusercontent.com/tenstorrent/tt-metal/168a956a09755190e9cb46b3556bf7c1314e5ff1/README.md",
+      "browse_url": "https://github.com/tenstorrent/tt-metal/commit/168a956a09755190e9cb46b3556bf7c1314e5ff1"
+    },
+    {
+      "label": "README 改为 Featured Models 列表；Blackhole 70B 条目不再出现",
+      "commit": "62f3cd0a4ff2e82d01af500eb5800cfcb6703d46",
+      "commit_date": "2025-08-12T19:40:39+00:00",
+      "url": "https://raw.githubusercontent.com/tenstorrent/tt-metal/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46/README.md",
+      "browse_url": "https://github.com/tenstorrent/tt-metal/commit/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46"
+    }
+  ],
+  "batches": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ]
+  ]
+}

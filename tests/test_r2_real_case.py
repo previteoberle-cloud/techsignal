@@ -65,3 +65,35 @@ def test_path_prefix_source_matching():
                        "https://raw.githubusercontent.com/tenstorrent/tt-metal/x/README.md").grade == EvidenceGrade.A
     other = reg.profile("raw.githubusercontent.com", "https://raw.githubusercontent.com/someone/else/x/README.md")
     assert other.grade == EvidenceGrade.D and other.source_type.value == "unknown"
+
+
+# --- P3 on real data: two batches replayed offline from what the live API returned ---
+
+CB = CASE / "output_cross_batch"
+
+
+def test_real_cross_batch_replay(tmp_path):
+    from techsignal.cli import main
+    out = tmp_path / "state"
+    for n in (1, 2):
+        src = CB / f"batch{n}" / "source_changes_report.json"
+        assert main(["run", "--changes", str(src), "--theses", str(CASE / "theses.json"),
+                     "--sources", str(CASE / "sources.json"), "--out", str(out), "--track-history"]) == 0
+        if n == 1:
+            (a,) = json.loads((out / "decision_log.json").read_text(encoding="utf-8"))["assessments"]
+            assert (a["assumption_id"], a["direction"]) == ("BH1", "weakens")
+    log = json.loads((out / "decision_log.json").read_text(encoding="utf-8"))
+    (a,) = log["assessments"]
+    assert (a["assumption_id"], a["direction"], a["basis"]) == ("BH1", "insufficient", "rule")
+    (t,) = log["cross_batch_transitions"]
+    assert (t["kind"], t["before_state"], t["after_state"]) == ("unresolved", "削弱", "证据不足")
+    for f in ("brief.md", "decision_log.json", "judgements.jsonl", "evidence.jsonl"):
+        assert (out / f).read_text(encoding="utf-8") == (CB / "batch2" / f).read_text(encoding="utf-8"), f
+    assert json.loads((CASE / "theses.json").read_text(encoding="utf-8"))["theses"][0]["status"] == "active"
+
+
+def test_real_cross_batch_versions_are_the_recorded_commits():
+    obs = json.loads((CB / "observation_record.json").read_text(encoding="utf-8"))
+    assert [b["to_version"][:7] for b in obs["batches"]] == ["168a956", "62f3cd0"]
+    removed = json.loads((CB / "batch2" / "evidence.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+    assert any("70B (TP=4)" in x and "QuietBox (Blackhole)" in x for x in removed["excerpt_removed"])

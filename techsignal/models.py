@@ -214,6 +214,33 @@ class Assessment(_Strict):
     thesis_status_change: Literal["none"] = "none"
 
 
+class JudgementRecord(_Strict):
+    """One assessment as recorded in judgements.jsonl (append-only history across runs, R2)."""
+    run_id: str
+    period_to: int
+    assessment_id: str
+    thesis_id: str | None
+    assumption_id: str | None
+    direction: Direction
+    tentative_direction: Direction | None
+    basis: Basis
+    evidence_ids: list[str]
+    evidence_grade: str
+    source_name: str
+
+
+class JudgementTransition(_Strict):
+    thesis_id: str
+    assumption_id: str
+    kind: Literal["first", "reinforced", "conflict", "unresolved", "changed"]
+    explanation: str
+    before_state: str
+    before_evidence_ids: list[str]
+    before_run_id: str | None
+    after_state: str
+    after_evidence_ids: list[str]
+
+
 class FilteredEvent(_Strict):
     event_id: str | None
     watch_uuid: str
@@ -273,12 +300,14 @@ class Brief(_Strict):
     disclaimers: list[str]
     mock_used: bool
     stats: dict[str, int]
+    transitions: list[Statement] = Field(default_factory=list)
 
     def all_statements(self) -> list[Statement]:
         out: list[Statement] = []
         for item in self.items:
             out.extend(item.all_statements())
         out.extend(self.unrelated)
+        out.extend(self.transitions)
         return out
 
 

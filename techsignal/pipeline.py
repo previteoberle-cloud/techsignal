@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from .adapters.cdio import parse_changes_report
-from .assess import AssessStats, assess_event, recommend, resolve_conflicts
+from .assess import AssessStats, assess_event, recommend, resolve_conflicts, resolve_cross_batch
 from .brief import build_brief, render_markdown
 from .models import (
     Assessment,
@@ -14,7 +14,10 @@ from .models import (
     Evidence,
     EvidenceGrade,
     FilteredEvent,
+    JudgementRecord,
+    JudgementTransition,
     Thesis,
+    short_hash,
 )
 from .providers import LLMProvider
 from .rules import match_theses
@@ -37,6 +40,8 @@ class RunResult:
     stats: AssessStats
     provider_name: str | None = None
     notes: list[str] = field(default_factory=list)
+    transitions: list[JudgementTransition] = field(default_factory=list)
+    new_records: list[JudgementRecord] = field(default_factory=list)
 
     def decision_log(self) -> dict:
         return {
@@ -45,6 +50,8 @@ class RunResult:
             "stats": asdict(self.stats),
             "filtered": [f.model_dump(mode="json") for f in self.filtered],
             "assessments": [a.model_dump(mode="json") for a in self.assessments],
+            **({"cross_batch_transitions": [t.model_dump(mode="json") for t in self.transitions]}
+               if self.transitions else {}),
         }
 
     def by_watch(self, watch_uuid: str) -> list[Assessment]:
@@ -57,10 +64,15 @@ class RunResult:
 
 def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
                  provider: LLMProvider | None = None, ledger: EvidenceLedger | None = None,
-                 validate: bool = True, persist: bool = True) -> RunResult:
+                 validate: bool = True, persist: bool = True,
+                 history: list[JudgementRecord] | None = None) -> RunResult:
     """Run the whole chain. The ledger is written only at the very end, after validation passed,
     and only when persist=True and the ledger has a path. The CLI passes persist=False and commits
-    the ledger together with the other outputs (see cli._commit_outputs)."""
+    the ledger together with the other outputs (see cli._commit_outputs).
+
+    history: judgement records of earlier runs (judgements.jsonl). When given, this run's
+    assessments are checked against them (assess.resolve_cross_batch) and the brief explains every
+    before -> after transition. Theses are never modified either way."""
     meta, events = parse_changes_report(report)
     ledger = ledger if ledger is not None else EvidenceLedger()
     stats = AssessStats()
@@ -107,11 +119,22 @@ def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
         assessments.extend(assess_event(event, t, ev, theses, provider, stats, matches=matches))
 
     assessments = resolve_conflicts(assessments, used_evidence, stats)
+    transitions: list[JudgementTransition] = []
+    if history is not None:
+        assessments, transitions = resolve_cross_batch(assessments, history, stats)
     assessments = [recommend(a) for a in assessments]
+    run_id = "RUN-" + short_hash(str(meta["from"]), str(meta["to"]), *sorted(used_evidence), length=8)
+    new_records = [JudgementRecord(
+        run_id=run_id, period_to=meta["to"], assessment_id=a.assessment_id, thesis_id=a.thesis_id,
+        assumption_id=a.assumption_id, direction=a.direction, tentative_direction=a.tentative_direction,
+        basis=a.basis, evidence_ids=a.evidence_ids, evidence_grade=used_evidence[a.evidence_ids[0]].grade.value,
+        source_name=used_evidence[a.evidence_ids[0]].source_name) for a in assessments]
 
     provider_name = getattr(provider, "name", None) if provider else None
-    brief = build_brief(meta, events, used_evidence, assessments, filtered, theses,
-                        provider_name, bool(provider and provider.is_mock))
+    # Conflicting evidence may come from earlier batches (history mode): look it up in the ledger.
+    evidence_lookup = {i: ledger.get(i) for i in ledger.ids()} | used_evidence
+    brief = build_brief(meta, events, evidence_lookup, assessments, filtered, theses,
+                        provider_name, bool(provider and provider.is_mock), transitions=transitions)
     md = render_markdown(brief)
     if validate:
         assert_valid(brief, md, ledger.ids(), {t.thesis_id for t in theses})
@@ -120,4 +143,4 @@ def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
 
     return RunResult(meta=meta, events=events, filtered=filtered, evidence=used_evidence,
                      assessments=assessments, brief=brief, markdown=md, stats=stats,
-                     provider_name=provider_name)
+                     provider_name=provider_name, transitions=transitions, new_records=new_records)

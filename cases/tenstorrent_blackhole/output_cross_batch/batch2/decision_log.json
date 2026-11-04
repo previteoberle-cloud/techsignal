@@ -1,0 +1,70 @@
+{
+  "assessments": [
+    {
+      "assessment_id": "AS-87c1503ac2",
+      "assumption_id": "BH1",
+      "basis": "rule",
+      "confidence": "low",
+      "conflicting_evidence_ids": [],
+      "direction": "insufficient",
+      "event_id": "CE-d1aed86896",
+      "evidence_ids": [
+        "EV-5f873c4ac3"
+      ],
+      "limitations": [],
+      "matched_signals": [
+        "BH1·削弱信号「70B[^|]*\\|[^|]*\\|[^|]*Blackhole」出现在删除内容：| [Llama 3.1 70B (TP=4)](./models/tt_transformers)                 | 32    | [QuietBox (Blackhole)](https://tenstorrent.com/hardware/tt-quietbox) | 195*       | 14.9*  |               | 476.5*  | [v0.59.0-rc53](https://github.com/tenstorrent/tt-metal/tree/v0.59.0-rc53) | [f028da1](https://github.com/tenstorrent/vllm/tree/f028da11b5b8205272bf18a478de93bd2dd3e29e/tt_metal)      |"
+      ],
+      "model_rationale": null,
+      "open_questions": [
+        "需要人工阅读变化原文，判断其与关键假设的关系"
+      ],
+      "provider_name": null,
+      "rationale": [
+        "命中的信号处于否定语境或出现在被删除的内容中，规则层不做方向判断：BH1·削弱信号「70B[^|]*\\|[^|]*\\|[^|]*Blackhole」出现在删除内容：| [Llama 3.1 70B (TP=4)](./models/tt_transformers)                 | 32    | [QuietBox (Blackhole)](https://tenstorrent.com/hardware/tt-quietbox) | 195*       | 14.9*  |               | 476.5*  | [v0.59.0-rc53](https://github.com/tenstorrent/tt-metal/tree/v0.59.0-rc53) | [f028da1](https://github.com/tenstorrent/vllm/tree/f028da11b5b8205272bf18a478de93bd2dd3e29e/tt_metal)      |",
+        "规则层无法判定，且未配置模型 Provider"
+      ],
+      "recommended_action": "列入待核实清单，补充一手来源后重新评估；在此之前不调整结论",
+      "tentative_direction": null,
+      "thesis_id": "TH-TT-001",
+      "thesis_status_change": "none"
+    }
+  ],
+  "cross_batch_transitions": [
+    {
+      "after_evidence_ids": [
+        "EV-5f873c4ac3"
+      ],
+      "after_state": "证据不足",
+      "assumption_id": "BH1",
+      "before_evidence_ids": [
+        "EV-7446cadb69"
+      ],
+      "before_run_id": "RUN-d10ea270",
+      "before_state": "削弱",
+      "explanation": "新变化涉及该假设但无法判定方向（如相关内容被删除、处于否定语境），保留历史判断并标记待核实",
+      "kind": "unresolved",
+      "thesis_id": "TH-TT-001"
+    }
+  ],
+  "filtered": [],
+  "meta": {
+    "changes_total": 1,
+    "from": 1793772617,
+    "incomplete": false,
+    "mode": "net_change",
+    "monitors_checked": 1,
+    "to": 1793772619,
+    "total": 1
+  },
+  "provider": null,
+  "stats": {
+    "conflicts": 0,
+    "grade_downgrades": 0,
+    "notes": [],
+    "provider_calls": 0,
+    "provider_failures": 0,
+    "provider_rejections": 0,
+    "rule_decisions": 0
+  }
+}

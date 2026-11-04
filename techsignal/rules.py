@@ -94,15 +94,20 @@ def decide(match: ThesisMatch, t: TriageResult) -> RuleOutcome:
         return RuleOutcome("ambiguous", signals=[], reasons=[
             f"变化提及「{ents}」并涉及主题词「{'、'.join(match.topic_hits)}」，但未命中任何确定性信号规则"])
 
+    # Undecided outcomes still say which assumption they concern when that is unambiguous, so the
+    # history of that assumption can be followed across batches (R2). No direction is implied.
+    touched = sorted({s.assumption_id for s in signals})
+    single = touched[0] if len(touched) == 1 else None
+
     unclear = [s for s in signals if s.negated or s.side == "removed"]
     if unclear:
-        return RuleOutcome("ambiguous", signals=signals, reasons=[
+        return RuleOutcome("ambiguous", assumption_id=single, signals=signals, reasons=[
             "命中的信号处于否定语境或出现在被删除的内容中，规则层不做方向判断：" + "；".join(s.describe() for s in unclear)])
 
     polarities = {s.polarity for s in signals}
     if len(polarities) > 1:
         # Conservative: no direction, but every signal is named so nothing is dropped silently.
-        return RuleOutcome("ambiguous", signals=signals, reasons=[
+        return RuleOutcome("ambiguous", assumption_id=single, signals=signals, reasons=[
             "同一变化中同时出现支持与削弱信号，规则层不做方向判断：" + "；".join(s.describe() for s in signals)])
 
     direction = Direction.SUPPORTS if polarities == {"support"} else Direction.WEAKENS

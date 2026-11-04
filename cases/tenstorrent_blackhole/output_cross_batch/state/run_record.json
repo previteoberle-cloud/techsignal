@@ -1,0 +1,33 @@
+{
+  "brief_stats": {
+    "assessments": 1,
+    "events_filtered": 0,
+    "events_total": 1,
+    "insufficient": 1,
+    "supports": 0,
+    "unrelated": 0,
+    "weakens": 0
+  },
+  "cdio_base_url": "http://127.0.0.1:54159",
+  "cdio_version": "0.60.10",
+  "fetched_at_utc": "2026-11-04T06:10:19Z",
+  "http_requests": 2,
+  "incomplete": false,
+  "input_mode": "live_api",
+  "note": "输入由 TechSignal 通过 changedetection.io REST API 在线拉取；原始响应保存在 source_changes_report.json",
+  "provider": null,
+  "provider_is_mock": false,
+  "report_sha256": "4b8bbe84ceadc36ee0f83ddd081b340c1f8cea9082c53b14d87303fe83785992",
+  "request_params": {
+    "from": 1793772617,
+    "max_lines_per_watch": 2000,
+    "page_size": 50,
+    "tag": null,
+    "to": 1793772619,
+    "uuids": [
+      "99a85885-68fe-485e-b34e-f773d5453407"
+    ]
+  },
+  "techsignal_version": "0.1.0",
+  "watches_in_report": 1
+}

@@ -1,0 +1,263 @@
+{
+  "disclaimers": [
+    "本速览为 TechSignal R1 研究原型的输出，不构成投资建议。",
+    "输入为 changedetection.io GET /api/v1/changes?format=json 的离线数据；R1 未接入在线服务。",
+    "结论状态不会因新信息自动改变；「削弱」仅触发人工复核建议。"
+  ],
+  "filtered": [],
+  "items": [
+    {
+      "actions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "action",
+          "text": "列入待核实清单，补充一手来源后重新评估；在此之前不调整结论",
+          "thesis_ids": []
+        }
+      ],
+      "direction": "insufficient",
+      "evidence_grade": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "EV-5f873c4ac3：A｜公司官方一手披露",
+          "thesis_ids": []
+        }
+      ],
+      "headline": "证据不足，需要核实｜Tenstorrent Blackhole 大模型推理软件成熟度｜Tenstorrent tt-metal README（官方 GitHub）",
+      "impact": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "inference",
+          "text": "影响方向：证据不足，需要核实；置信度 low；判定层：确定性规则",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "结论状态保持「active」，系统不会因新信息自动修改历史结论",
+          "thesis_ids": [
+            "TH-TT-001"
+          ]
+        }
+      ],
+      "item_id": "AS-87c1503ac2",
+      "new_info": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "新增：| 0.62.0 | ETA Aug 13, 2025 |",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "新增：| 0.61.0 | Skipped |",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "新增：| 0.60.1 | Jul 22, 2025 |",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "新增：## Featured Models",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "新增：The Models team is focused on developing the following models to a customer-ready state. Ongoing work includes optimizations for performance, accuracy, and com…",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "删除：| Llama 3.1 70B (TP=4) | 32 | QuietBox (Blackhole) | 195* | 14.9* | | 476.5* | v0.59.0-rc53 | f028da1 |",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "删除：| 0.60.0 | Jul 18, 2025 |",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "删除：## LLMs",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "删除：| Model | Batch | Hardware | ttft (ms) | t/s/u | Target<br>t/s/u | t/s | TT-Metalium Release | vLLM Tenstorrent Repo Release |",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "删除：| Qwen 3 32B (TP=8) | 32 | QuietBox (Wormhole) | 109 | 22.1 | 30 | 707.2 | v0.59.0-rc52 | f028da1 |",
+          "thesis_ids": []
+        },
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "另有 123 行变化未在速览中展开，见证据台账",
+          "thesis_ids": []
+        }
+      ],
+      "open_questions": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "question",
+          "text": "需要人工阅读变化原文，判断其与关键假设的关系",
+          "thesis_ids": []
+        }
+      ],
+      "priority": "P2",
+      "reasoning": [
+        {
+          "basis": "rule",
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "inference",
+          "text": "规则层：命中的信号处于否定语境或出现在被删除的内容中，规则层不做方向判断：BH1·削弱信号「70B[^|]*\\|[^|]*\\|[^|]*Blackhole」出现在删除内容：| Llama 3.1 70B (TP=4) | 32 | QuietBox (Blackhole) | 195* | 14.9* | | 476.5* | v0.59.0-rc53 | f028da1 |",
+          "thesis_ids": []
+        },
+        {
+          "basis": "rule",
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "inference",
+          "text": "规则层：规则层无法判定，且未配置模型 Provider",
+          "thesis_ids": []
+        }
+      ],
+      "sources": [
+        {
+          "basis": null,
+          "evidence_ids": [
+            "EV-5f873c4ac3"
+          ],
+          "kind": "fact",
+          "text": "Tenstorrent 官方 GitHub 仓库（raw）（公司官方）https://raw.githubusercontent.com/tenstorrent/tt-metal/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46/README.md；changedetection.io 抓取于 2026-11-04 06:10 UTC，对比其上一次抓取 2026-11-04 06:10 UTC（抓取时间不等于发布时间）；追溯：changedetection.io /api/v1/watch/99a85885-68fe-485e-b34e-f773d5453407/difference/1793772617/1793772619",
+          "thesis_ids": []
+        }
+      ],
+      "thesis_context": [
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "Tenstorrent Blackhole 大模型推理软件成熟度：截至 2025-07-11，Tenstorrent 官方 tt-metal 模型表中，Blackhole 平台仅有 Llama 3.1 8B（p100/p150）的数据，且均标注为初步（* Blackhole software optimization is under active development），没有 70B 级模型记录；据此判断 Blackhole 的大模型推理软件支持仍处早期，70B 级模型的官方部署依托 Wormhole 平台（QuietBox / Galaxy）。（截至 2025-07-11，负责人 TechSignal 演示（依据公开资料整理，AI 辅助））",
+          "thesis_ids": [
+            "TH-TT-001"
+          ]
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "结论依据 SRC-TT-1：Tenstorrent（tt-metal 官方仓库），2025-07-11T16:33:05+00:00（提交 4cd196f3ce），「| Llama 3.1 8B | 32 | p150 | 69* | 29.1* | | 931.2* | v0.59.0-rc3 | 739dcaa |」（https://github.com/tenstorrent/tt-metal/blob/4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1/README.md）",
+          "thesis_ids": [
+            "TH-TT-001"
+          ]
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "结论依据 SRC-TT-2：Tenstorrent（tt-metal 官方仓库），2025-07-11T16:33:05+00:00（提交 4cd196f3ce），「\\* Blackhole software optimization is under active development.」（https://github.com/tenstorrent/tt-metal/blob/4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1/README.md）",
+          "thesis_ids": [
+            "TH-TT-001"
+          ]
+        },
+        {
+          "basis": null,
+          "evidence_ids": [],
+          "kind": "context",
+          "text": "相关假设 BH1：Blackhole 平台上尚无 70B 级大模型的官方性能记录",
+          "thesis_ids": [
+            "TH-TT-001"
+          ]
+        }
+      ]
+    }
+  ],
+  "mock_used": false,
+  "period_from": 1793772617,
+  "period_to": 1793772619,
+  "stats": {
+    "assessments": 1,
+    "events_filtered": 0,
+    "events_total": 1,
+    "insufficient": 1,
+    "supports": 0,
+    "unrelated": 0,
+    "weakens": 0
+  },
+  "title": "TechSignal 研究速览｜2026-11-04 至 2026-11-04",
+  "transitions": [
+    {
+      "basis": "rule",
+      "evidence_ids": [
+        "EV-7446cadb69",
+        "EV-5f873c4ac3"
+      ],
+      "kind": "inference",
+      "text": "TH-TT-001·BH1：新变化无法定向，保留原判断待核实。之前：削弱（批次 RUN-d10ea270） → 现在：证据不足。原因：新变化涉及该假设但无法判定方向（如相关内容被删除、处于否定语境），保留历史判断并标记待核实；研究结论本身未被修改",
+      "thesis_ids": [
+        "TH-TT-001"
+      ]
+    }
+  ],
+  "unrelated": []
+}

@@ -178,11 +178,56 @@ def run_case(python: str, case_path: Path, out: Path, log_path: Path | None = No
             "changedetection_version": cdio_version,
             "watch_uuid": obs["uuid"],
             "observations": [dict(v, snapshot_timestamp=ts)
-                             for v, ts in zip(case["versions"], obs["snapshot_timestamps"])],
+                             for v, ts in zip(case["versions"], obs["snapshot_timestamps"], strict=True)],
         }
         (Path(out) / "observation_record.json").write_text(
             json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return rc
+
+
+def run_cross_batch_case(python: str, case_path: Path, out: Path, log_path: Path | None = None) -> int:
+    """Like run_case, but the case lists several batches (pairs of version indexes). All versions are
+    observed on one watch first; then each batch is processed in order with --track-history, so later
+    batches are judged against the history of earlier ones. A copy of the state after each batch is
+    kept in out/batch<N>/; the cumulative state is in out/state/."""
+    from .cli import main as cli_main
+
+    case_path = Path(case_path)
+    case = json.loads(case_path.read_text(encoding="utf-8"))
+    base = case_path.parent
+    out = Path(out)
+    state = out / "state"
+    with LiveCdio(python, log_path=log_path) as cdio:
+        obs = cdio.observe_versions(case["watch_title"], [v["url"] for v in case["versions"]])
+        ts = obs["snapshot_timestamps"]
+        os.environ["TECHSIGNAL_CDIO_API_KEY"] = cdio.client.api_key
+        try:
+            for n, (a, b) in enumerate(case["batches"], 1):
+                rc = cli_main(["run", "--cdio-url", cdio.url, "--from", str(ts[a]), "--to", str(ts[b]),
+                               "--uuids", obs["uuid"], "--max-lines", "2000", "--track-history",
+                               "--theses", str(base / case["theses"]), "--sources", str(base / case["sources"]),
+                               "--out", str(state)])
+                if rc != 0:
+                    return rc
+                snap = out / f"batch{n}"
+                shutil.rmtree(snap, ignore_errors=True)
+                shutil.copytree(state, snap)
+        finally:
+            os.environ.pop("TECHSIGNAL_CDIO_API_KEY", None)
+        cdio_version = cdio.client.system_info().get("version")
+    record = {
+        "case_id": case["case_id"],
+        "note": "真实 changedetection.io 实例依次抓取下列已发布版本；各批次按顺序以 --track-history 处理。"
+                "快照时间戳是抓取时间，发布日期取自 git 提交记录。",
+        "changedetection_version": cdio_version,
+        "watch_uuid": obs["uuid"],
+        "batches": [{"batch": n, "from_version": case["versions"][a]["commit"], "to_version": case["versions"][b]["commit"]}
+                    for n, (a, b) in enumerate(case["batches"], 1)],
+        "observations": [dict(v, snapshot_timestamp=t) for v, t in zip(case["versions"], ts, strict=True)],
+    }
+    (out / "observation_record.json").write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n",
+                                                 encoding="utf-8")
+    return 0
 
 
 def main(argv=None) -> int:
@@ -193,7 +238,9 @@ def main(argv=None) -> int:
     p.add_argument("--log", help="changedetection.io 进程日志输出路径")
     a = p.parse_args(argv)
     try:
-        return run_case(a.python, Path(a.case), Path(a.out), Path(a.log) if a.log else None)
+        case = json.loads(Path(a.case).read_text(encoding="utf-8"))
+        runner = run_cross_batch_case if case.get("batches") else run_case
+        return runner(a.python, Path(a.case), Path(a.out), Path(a.log) if a.log else None)
     except (LiveCdioError, CdioError) as e:
         print(f"失败：{e}", file=sys.stderr)
         return 2

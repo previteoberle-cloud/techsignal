@@ -219,3 +219,5 @@ TechSignal 自己的 workflow：push 和 PR 两次运行都成功。上游 workf
 | Container Build（PR 事件）· linux/arm/v7 | `Failed to fetch: https://www.piwheels.org/…/pillow-13.0.0-cp311-cp311-linux_armv7l.whl … connection closed before message completed`；其余 ARM job 随之取消 | **外部网络。** 同一提交在 push 事件下的 Container Build 运行成功 |
 
 TechSignal 引入的问题：**未发现**。没有修改任何上游代码或 workflow，也没有为了让 CI 变绿而屏蔽或跳过任何检查。说明：上述「上游基线」的结论依据的是日志和提交内容。我没有在 Fork 的 master 上单独运行一次上游 CI 作为对照，因为 Fork 的 master 没有 CI 运行记录。
+
+> **R2 更正（2026-11-04）：** 上文风险 2 的「剩余风险」中写道「按上述顺序，最坏情况是台账比 brief 新，不会出现 brief 引用台账里不存在的证据」。这个结论只在 `--append-ledger` 模式下成立。默认模式下，替换中途失败可能让旧的 brief.md 对着不含旧证据的新台账。R2 已补充失败注入测试，并在替换失败时回滚，详见 [R2_ACCEPTANCE.md](R2_ACCEPTANCE.md) 第六节。

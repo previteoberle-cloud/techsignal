@@ -40,6 +40,7 @@ def validate_brief(brief: Brief, evidence_ids: set[str], thesis_ids: set[str]) -
     issues: list[Issue] = []
     pairs = [(item.item_id, s) for item in brief.items for s in item.all_statements()]
     pairs += [("unrelated", s) for s in brief.unrelated]
+    pairs += [("transitions", s) for s in brief.transitions]
     for where, s in pairs:
         snippet = s.text[:40]
         if s.kind in (K.FACT, K.INFERENCE) and not s.evidence_ids:
