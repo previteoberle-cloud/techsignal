@@ -7,11 +7,13 @@ from __future__ import annotations
 
 import streamlit as st
 
+from techsignal import project_monitor as M
 from techsignal import projects as P
 from techsignal.workbench import labels as L
+from techsignal.workbench import viewmodel as vm
 
 NEW = "__new__"
-PROJECT_PAGES = ["概况", "监测与评估", "研究设定", "修改记录"]
+PROJECT_PAGES = ["概况", "监测与评估", "研判结果", "研究设定", "修改记录"]
 MATCH_NOTE = ("关键词和信号词按字面匹配（不区分大小写），属于确定性的关键词规则，不是语义理解。"
               "没有填写信号词的假设，相关变化只会被标为「待人工判断」。")
 
@@ -158,12 +160,187 @@ def _overview(store: P.ProjectStore, p: P.Project) -> None:
 
 
 def _results_summary(store: P.ProjectStore, p: P.Project) -> None:
-    st.info("尚无监测变化。需要连接你自己运行的 changedetection.io 并建立监测后，才会有结果；"
-            "这里不会显示任何示例或伪造的数据。")
+    info = M.summary(store, p.project_id)
+    last = info["last_check"]
+    if not info["runs"]:
+        st.info("尚无监测变化。" + ("需要连接你自己运行的 changedetection.io 并建立监测后，才会有结果；"
+                                 if not info["state"].watches else "")
+                + "这里不会显示任何示例或伪造的数据。")
+        if last:
+            st.caption(f"最近一次检查（{_t(last.finished_at)}）：{last.message}")
+        return
+    ref = info["runs"][-1]
+    run = _load_project_run(store, p, ref.run_id)
+    if run is None:
+        return
+    st.markdown(f"**{run.headline()}**")
+    st.caption(f"最近一次产生研判：{_t(ref.created_at)}（基于研究设定 v{ref.thesis_version}）"
+               + (f"；之后又检查过，最近一次：{last.message}" if last and last.run_id != ref.run_id else ""))
+    st.button("查看研判结果", key="goto_results", on_click=_goto, args=(p.project_id, "研判结果"))
+
+
+def _t(iso: str) -> str:
+    return iso.replace("T", " ").rstrip("Z") + " UTC"
+
+
+OUTCOME_ZH = {"assessed": "发现实际变化，已研判", "no_new_snapshot": "没有新的快照", "no_net_change": "没有实质差异",
+              "failed": "失败"}
+ACTION_ZH = {"already_linked": "已关联", "link_existing": "关联已有监测项（不重复创建）", "create": "新建监测项"}
 
 
 def _monitor(store: P.ProjectStore, p: P.Project) -> None:
-    st.info("尚无监测变化。")
+    if p.status != "ready":
+        st.warning("草稿项目不能建立监测。请先在「研究设定」中补全并完成创建。")
+        return
+    ss = st.session_state
+    state = M.load_state(store, p.project_id)
+    st.caption("监测依赖你自己运行的 changedetection.io（外部服务）。本页只在你点击按钮时访问它；"
+               "不会在后台定时运行，也不会发送通知。API key 只保存在本次浏览器会话中，不写入任何文件。")
+    c1, c2 = st.columns([2, 1.3])
+    url = c1.text_input("changedetection.io 地址", value=state.cdio_url or "http://127.0.0.1:5000", key="mon_url")
+    key = c2.text_input("API key", type="password", key="mon_key")
+    conn_key = f"conn-{p.project_id}"
+    if st.button("连接并读取监测项", key="mon_connect"):
+        try:
+            client = M.client_for(url, key)
+            ss[conn_key] = {"url": client.base_url, **M.connect(client)}
+        except P.ProjectError as e:
+            ss.pop(conn_key, None)
+            st.error(str(e))
+    conn = ss.get(conn_key)
+    if conn and conn["url"] != url.strip().rstrip("/"):
+        conn = None
+    if not conn:
+        st.info("当前未连接 changedetection.io。没有连接时无法建立监测或检查变化；已有的研判结果仍可在「研判结果」中查看。")
+        _linked(state, None)
+        _check_history(store, p)
+        return
+    st.success(f"已连接：changedetection.io {conn['version'] or '版本未知'}，共有 {len(conn['watches'])} 个监测项。")
+    with st.expander(f"查看该服务中已有的监测项（{len(conn['watches'])} 个）"):
+        mine = {w.watch_uuid for w in state.watches}
+        for uuid, w in conn["watches"].items():
+            st.markdown(f'<div class="ts-line">{"【本项目】" if uuid in mine else ""}{w["title"] or "（无标题）"}　{w["url"]}</div>',
+                        unsafe_allow_html=True)
+    plan = M.plan_watches(p, state, conn["watches"])
+    todo = [x for x in plan if x.action != "already_linked"]
+    st.markdown("#### 监测项")
+    for x in plan:
+        st.markdown(f"- {ACTION_ZH[x.action]}：{x.url}")
+    if todo:
+        ok = st.checkbox(f"我确认：在 {conn['url']} 中新建 {sum(x.action == 'create' for x in todo)} 个监测项，"
+                         f"并关联 {sum(x.action == 'link_existing' for x in todo)} 个已有监测项", key="mon_confirm")
+        if st.button("建立监测", key="mon_apply", disabled=not ok, type="primary"):
+            try:
+                M.apply_plan(store, p.project_id, M.client_for(url, key), plan, confirmed=ok)
+                ss[conn_key] = {"url": conn["url"], **M.connect(M.client_for(url, key))}
+                st.rerun()
+            except P.ProjectError as e:
+                st.error(str(e))
+    _linked(state, conn)
+    if state.watches:
+        st.markdown("#### 手动检查一次")
+        st.caption("系统会请 changedetection.io 立即重新抓取本项目的监测项，等待完成后读取新变化。"
+                   "没有新快照或没有实质差异时，只记录「本次没有新的变化」，不会生成研判。第一次抓取只建立基线。")
+        if st.button("立即检查一次并研判", key="mon_check", type="primary"):
+            with st.spinner("正在请 changedetection.io 重新抓取并等待结果（最多约 90 秒）…"):
+                try:
+                    rec = M.check_now(store, p.project_id, M.client_for(url, key, timeout=30))
+                except P.ProjectError as e:
+                    st.error(str(e))
+                    rec = None
+            if rec is not None:
+                if rec.outcome == "assessed":
+                    st.success(rec.message)
+                    st.button("查看研判结果", key="mon_goto_results", on_click=_goto, args=(p.project_id, "研判结果"))
+                elif rec.outcome == "failed":
+                    st.error(rec.message)
+                else:
+                    st.info("本次没有新的变化。" + rec.message)
+    _check_history(store, p)
+
+
+def _linked(state, conn) -> None:
+    if not state.watches:
+        return
+    st.markdown("#### 已关联的监测项")
+    for w in state.watches:
+        exists = "" if conn is None else ("" if w.watch_uuid in conn["watches"] else "（在当前服务中已找不到）")
+        st.markdown(f'<div class="ts-line">{w.url}　·　监测项 {w.watch_uuid[:8]}　·　'
+                    f'{"由 TechSignal 创建" if w.created_by_techsignal else "关联已有监测项"}{exists}</div>',
+                    unsafe_allow_html=True)
+
+
+def _check_history(store: P.ProjectStore, p: P.Project) -> None:
+    cs = M.checks(store, p.project_id)
+    if not cs:
+        return
+    st.markdown("#### 检查记录")
+    for c in reversed(cs[-10:]):
+        st.markdown(f"- {_t(c.finished_at)}　**{OUTCOME_ZH[c.outcome]}**　{c.message}")
+
+
+def _load_project_run(store: P.ProjectStore, p: P.Project, run_id: str):
+    try:
+        d = M.run_dir(store, p.project_id, run_id)
+        return vm.load_run(d, d / "theses.json")
+    except (vm.LoadError, P.ProjectError) as e:
+        st.error(f"无法读取该次研判：{e}")
+        return None
+
+
+def _results(store: P.ProjectStore, p: P.Project) -> None:
+    refs = M.runs(store, p.project_id)
+    if not refs:
+        st.info("尚无监测变化。完成「监测与评估」中的检查并发现实际变化后，研判结果会出现在这里。")
+        return
+    by = {r.run_id: r for r in refs}
+    rid = st.selectbox("研判批次", list(by)[::-1], key="prun",
+                       format_func=lambda i: f"{_t(by[i].created_at)}（研究设定 v{by[i].thesis_version}）")
+    run = _load_project_run(store, p, rid)
+    if run is None:
+        return
+    ref = by[rid]
+    if ref.thesis_version != p.version:
+        st.caption(f"该批次使用的是研究设定 v{ref.thesis_version}，当前为 v{p.version}；以下按当时的设定展示。")
+    st.markdown("".join(f'<span class="ts-tag">{t}</span>' for t in run.provenance_lines()), unsafe_allow_html=True)
+    st.info(run.headline())
+    rows = [a for a in run.assessments() if a["direction"] != "unrelated"]
+    if not rows:
+        st.caption("本批次的变化与研究判断无关。")
+    for n, a in enumerate(rows):
+        _judgement_card(run, a, f"pj{n}")
+    unrelated = [a for a in run.assessments() if a["direction"] == "unrelated"]
+    if unrelated:
+        with st.expander(f"与研究判断无关的变化（{len(unrelated)} 条）"):
+            for a in unrelated:
+                st.caption("；".join(a.get("rationale", [])))
+    st.download_button("下载中文速览（Markdown）", data=run.markdown.encode("utf-8"),
+                       file_name=f"techsignal_{p.project_id}_{rid}.md", mime="text/markdown", key="pdownload")
+
+
+def _judgement_card(run, a: dict, key: str) -> None:
+    x = vm.explain(run, a)
+    with st.container(border=True):
+        st.markdown(f"**{x['assumption']}**")
+        st.markdown(f"判断：**{x['state']}**　·　判断来源：**{x['source']}**　·　置信度：{x['confidence']}")
+        st.markdown(f"**发生了什么**：{x['what']}")
+        with st.expander("为什么这样判断"):
+            for r in x["why"]:
+                st.markdown(f"- {r}")
+            if x["model"]:
+                st.markdown(f"- 模型建议（未直接采用为结论）：{x['model']}")
+            st.markdown("**通过 / 触发的检查**")
+            for g in x["gates"]:
+                st.markdown(f"- {g}")
+        if x["unresolved"]:
+            st.markdown("**仍未解决**：" + "；".join(x["unresolved"]))
+        st.caption(f"建议动作：{x['action']}　·　复核状态：{x['review']}")
+        for ev in x["evidence"]:
+            with st.expander(f"证据 {ev['id']}｜{ev['source_name']}｜{ev['grade']}"):
+                st.markdown(f'<div class="ts-line">{ev["url"]}</div>', unsafe_allow_html=True)
+                for title, lines in (("新增", ev["added"]), ("删除", ev["removed"])):
+                    for line in lines[:8]:
+                        st.markdown(f'<div class="ts-line">{title}：{line}</div>', unsafe_allow_html=True)
 
 
 def _edit(store: P.ProjectStore, p: P.Project) -> None:
@@ -260,6 +437,8 @@ def render() -> None:
             with st.expander(f"有 {len(problems)} 个项目无法读取"):
                 for x in problems:
                     st.caption(x)
+    if store.allow_private_urls:
+        st.warning("开发测试模式：已设置 TECHSIGNAL_ALLOW_PRIVATE_URLS=1，允许监测本机或内网地址。正常使用时请不要开启。")
     if pid == NEW:
         _new_project(store)
         return
@@ -273,4 +452,4 @@ def render() -> None:
                 f'<span class="ts-tag">我的研究项目（与示例案例分开保存）</span>', unsafe_allow_html=True)
     page = st.radio("项目页面", PROJECT_PAGES, horizontal=True, key="ppage", label_visibility="collapsed")
     st.divider()
-    {"概况": _overview, "监测与评估": _monitor, "研究设定": _edit, "修改记录": _history}[page](store, p)
+    {"概况": _overview, "监测与评估": _monitor, "研判结果": _results, "研究设定": _edit, "修改记录": _history}[page](store, p)

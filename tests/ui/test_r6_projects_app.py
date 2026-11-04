@@ -127,3 +127,44 @@ def test_projects_root_inside_cases_is_refused(monkeypatch):
     at.radio(key="workspace").set_value("我的研究项目").run()
     assert "不能放在示例案例目录中" in _text(at)
     assert not (ROOT / "cases" / "mine").exists()
+
+
+# ---------------------------------------------------------------- Checkpoint 2: monitoring ---------
+
+def test_monitoring_flow_in_the_workbench(root):
+    from fake_cdio import FakeCdio
+    page = "https://github.com/tenstorrent/tt-metal"
+    cdio = FakeCdio(key="sk-ui-SECRET")
+    cdio.pages[page] = "Models\n| Llama 3.1 8B | n150 | 23 t/s |\n"
+    try:
+        at = _fill(_open(root))
+        at.button(key="create_project").click().run()
+        pid = at.selectbox(key="project").value
+        at.radio(key="ppage").set_value("监测与评估").run()
+        assert "当前未连接 changedetection.io" in _text(at)          # works without the service
+        at.text_input(key="mon_url").set_value(cdio.url)
+        at.text_input(key="mon_key").set_value("sk-ui-SECRET")
+        at.button(key="mon_connect").click().run()
+        assert "已连接：changedetection.io fake-0.0" in _text(at)
+        assert at.button(key="mon_apply").disabled                  # explicit confirmation first
+        assert cdio.watches == {}
+        at.checkbox(key="mon_confirm").check().run()
+        at.button(key="mon_apply").click().run()
+        assert not at.exception and len(cdio.watches) == 1
+        at.button(key="mon_check").click().run()
+        assert "本次没有新的变化" in _text(at)
+        cdio.pages[page] += "| Llama 3.1 70B | QuietBox (Blackhole) | 15 t/s |\n"
+        at.button(key="mon_check").click().run()
+        assert "已用真实流水线完成研判" in _text(at)
+        at.radio(key="ppage").set_value("研判结果").run()
+        t = _text(at)
+        assert "削弱原判断" in t and "判断来源：**确定性规则**" in t and "待人工复核" in t
+        assert "70B" in t and "研究判断保持不变" in t
+        at.radio(key="ppage").set_value("概况").run()
+        assert "尚无监测变化" not in _text(at) and "削弱原判断" in _text(at)
+        for f in root.rglob("*"):
+            if f.is_file():
+                assert "sk-ui-SECRET" not in f.read_text(encoding="utf-8", errors="replace")
+        assert P.ProjectStore(root).get(pid).version == 1
+    finally:
+        cdio.close()

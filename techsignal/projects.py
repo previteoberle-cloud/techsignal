@@ -40,6 +40,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from .models import Assumption, EvidenceGrade, SourceProfile, SourceType, Thesis
 
 PROJECTS_ENV = "TECHSIGNAL_PROJECTS_ROOT"
+ALLOW_PRIVATE_ENV = "TECHSIGNAL_ALLOW_PRIVATE_URLS"
 PROJECT_ID_RE = re.compile(r"^p-[0-9a-f]{12}$")
 SCHEMA = "techsignal.project/1"
 
@@ -169,12 +170,15 @@ def name_key(name: str) -> str:
 _BLOCKED_SUFFIXES = (".localhost", ".local", ".internal", ".lan", ".home", ".corp", ".intranet", ".arpa")
 
 
-def check_public_url(url: str) -> str:
+def check_public_url(url: str, allow_private: bool = False) -> str:
     """The normalized URL, or ProjectError saying in Chinese why it cannot be watched.
 
     Only http(s) URLs of public hosts are accepted: no credentials in the URL, no localhost or
     private/reserved IP addresses, no single-label or internal host names. (A public name can still
-    resolve to a private address; changedetection.io refuses to fetch those by default.)"""
+    resolve to a private address; changedetection.io refuses to fetch those by default.)
+
+    allow_private=True is a development/testing opt-in (TECHSIGNAL_ALLOW_PRIVATE_URLS=1, mirroring
+    changedetection.io's own ALLOW_IANA_RESTRICTED_ADDRESSES). Scheme and credential checks still apply."""
     raw = clean_text(url)
     if not raw:
         raise ProjectError("网址为空")
@@ -198,7 +202,9 @@ def check_public_url(url: str) -> str:
         ip = ipaddress.ip_address(host)
     except ValueError:
         ip = None
-    if ip is not None:
+    if allow_private:
+        pass
+    elif ip is not None:
         if not ip.is_global:
             raise ProjectError(f"不能监测本机、内网或保留地址：{raw}")
     else:
@@ -249,7 +255,7 @@ def _bounded(value: str, limit: int, what: str, problems: list[str]) -> str:
     return v
 
 
-def check_spec(spec: ProjectSpec, ready: bool) -> ProjectSpec:
+def check_spec(spec: ProjectSpec, ready: bool, allow_private: bool = False) -> ProjectSpec:
     """Cleaned spec, or ProjectError listing every problem. Drafts may be incomplete, but whatever
     they contain must still be valid (a draft cannot hold a private URL either)."""
     problems: list[str] = []
@@ -278,7 +284,7 @@ def check_spec(spec: ProjectSpec, ready: bool) -> ProjectSpec:
         if not clean_text(s.url):
             continue
         try:
-            url = check_public_url(s.url)
+            url = check_public_url(s.url, allow_private=allow_private)
         except ProjectError as e:
             problems.append(str(e))
             continue
@@ -432,8 +438,11 @@ def file_lock(path: Path, timeout: float = 10.0, stale: float = 120.0):
 
 
 class ProjectStore:
-    def __init__(self, root: Path | None = None):
+    def __init__(self, root: Path | None = None, allow_private_urls: bool | None = None):
         self.root = Path(root) if root is not None else default_projects_root()
+        # Development/testing opt-in only; the workbench shows a warning banner while it is on.
+        self.allow_private_urls = (os.getenv(ALLOW_PRIVATE_ENV) == "1") if allow_private_urls is None \
+            else bool(allow_private_urls)
         self._guard_root()
 
     def _guard_root(self) -> None:
@@ -544,7 +553,7 @@ class ProjectStore:
         atomic_write(d / "project.json", _dump(project))
 
     def create(self, spec: ProjectSpec, ready: bool) -> Project:
-        spec = check_spec(spec, ready)
+        spec = check_spec(spec, ready, self.allow_private_urls)
         self.root.mkdir(parents=True, exist_ok=True)
         with self._lock():
             self._check_name_free(spec.name)
@@ -572,7 +581,7 @@ class ProjectStore:
                note: str = "") -> Project:
         """Save an edit. Refused (ProjectConflict) when the project changed since `expected_version`.
         A ready project cannot go back to draft: its runs refer to a complete judgement."""
-        spec = check_spec(spec, ready)
+        spec = check_spec(spec, ready, self.allow_private_urls)
         with self._lock():
             self._check_name_free(spec.name, except_id=project_id)
             with self._lock(project_id):

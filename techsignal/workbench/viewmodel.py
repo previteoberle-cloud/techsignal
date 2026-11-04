@@ -399,3 +399,79 @@ def timeline(case: CaseRef, runs: list[RunView]) -> list[dict]:
             "verified": bool(run.verification()),
         })
     return out
+
+
+# ---------------------------------------------------------------------------
+# R6: why a judgement is what it is (progressive disclosure on the project pages)
+# ---------------------------------------------------------------------------
+
+SOURCE_ZH = {
+    "rule": "确定性规则",
+    "model_validated": "真实模型建议（已通过结构、引用与证据等级校验）",
+    "model_rejected": "模型建议未通过校验，已按规则保守处理",
+    "model_failed": "模型调用失败，已降级为规则结果",
+    "model_skipped": "超出本次模型调用上限，按规则保守处理",
+    "mock": "Mock / 协议桩（人工预置，非真实模型）",
+    "no_model": "规则无法判定，未配置模型",
+}
+REVIEW_ZH = {"pending_human": "待人工复核", "not_required": "无需立即复核", "human_confirmed": "已人工确认"}
+
+
+def judgement_source(a: dict) -> str:
+    """Which layer the judgement came from. Uses the structured field written since R6, and falls back
+    to reading older records conservatively."""
+    src = a.get("judgement_source")
+    if src:
+        return src
+    basis = a.get("basis")
+    if basis == "mock_model":
+        return "mock"
+    if basis == "model":
+        return "model_validated"
+    text = " ".join(a.get("rationale", []))
+    if a.get("provider_name") and "调用失败" in text:
+        return "model_failed"
+    if a.get("provider_name") and "未通过校验" in text:
+        return "model_rejected"
+    if "未配置模型" in text:
+        return "no_model"
+    return "rule"
+
+
+def explain(run: RunView, a: dict) -> dict:
+    """What happened, why, which evidence, which checks it passed, what is unresolved."""
+    row = run.judgement_row(a)
+    src = judgement_source(a)
+    source = SOURCE_ZH.get(src, "确定性规则")
+    if a["direction"] == "insufficient":
+        source += "；证据不足，需要人工判断"
+    evs = [run.evidence_view(e) for e in row["evidence_ids"]]
+    evs = [e for e in evs if e]
+    what = []
+    for e in evs[:1]:
+        for side, lines in (("新增", e["added"]), ("删除", e["removed"])):
+            sig = " ".join(a.get("matched_signals", []))
+            ranked = sorted(lines, key=lambda x: x not in sig)
+            what += [f"{side}「{x}」" for x in ranked[:2]]
+    gates = ["引用校验：所有证据编号都能在本批次证据台账中找到"]
+    for e in evs:
+        decisive = e["grade"].startswith(("A", "B"))
+        gates.append(f"证据等级：{e['id']} 为 {e['grade']}，" + ("可以单独支撑方向判断" if decisive else "不足以单独支撑方向判断"))
+    tent = a.get("tentative_direction")
+    if tent and tent != a["direction"]:
+        gates.append(f"降级：初步方向为「{L.zh(L.DIRECTION_SHORT, tent)}」，因证据等级、来源冲突或校验未通过，结论降为待核实")
+    if a.get("conflicting_evidence_ids"):
+        gates.append("冲突处理：与 " + "、".join(a["conflicting_evidence_ids"]) + " 方向相反，系统不自动裁决")
+    for g in a.get("gate_log", []):
+        if g not in gates:
+            gates.append(g)
+    gates.append("研究判断保持不变：系统只给出建议，不会修改你的结论")
+    review = a.get("review_status") or ("pending_human" if a["direction"] in ("weakens", "insufficient") else "not_required")
+    return {
+        "assumption": row["assumption"], "state": row["state"], "source": source, "source_code": src,
+        "confidence": row["confidence"], "what": "；".join(what) or "（变化内容见证据）",
+        "why": list(a.get("rationale", [])) or ["（无）"], "model": a.get("model_rationale"),
+        "gates": gates, "unresolved": [q for q in a.get("open_questions", []) if q],
+        "action": a.get("recommended_action", ""), "review": REVIEW_ZH.get(review, "待人工复核"),
+        "evidence": evs,
+    }
