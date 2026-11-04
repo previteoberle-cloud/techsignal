@@ -6,7 +6,8 @@ from techsignal.adapters.cdio import AdapterError, parse_changes_report, parse_u
 from techsignal.fixtures import build_report, fixture_files, load_upstream_builder
 
 upstream = load_upstream_builder()
-needs_upstream = pytest.mark.skipif(upstream is None, reason="changedetectionio/changes_report.py not present")
+needs_upstream = pytest.mark.skipif(
+    upstream is None, reason="needs changedetection.io source: scripts/fetch_changedetection.sh + TECHSIGNAL_CDIO_SOURCE")
 
 
 def test_parse_demo_report():
