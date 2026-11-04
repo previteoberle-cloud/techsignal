@@ -42,6 +42,17 @@ class RunResult:
     notes: list[str] = field(default_factory=list)
     transitions: list[JudgementTransition] = field(default_factory=list)
     new_records: list[JudgementRecord] = field(default_factory=list)
+    verify_run: object | None = None
+
+    def verification_trace(self) -> dict | None:
+        if self.verify_run is None:
+            return None
+        return {
+            "note": "补证由确定性策略触发、规划和执行；没有任何大模型参与决策。每条记录对应一次实际执行（或被拦截/去重）的工具调用。",
+            "summaries": [s.model_dump(mode="json") for s in self.verify_run.summaries],
+            "calls": [c.model_dump(mode="json") for c in self.verify_run.calls],
+            "new_evidence_ids": [e.evidence_id for e in self.verify_run.new_evidence],
+        }
 
     def decision_log(self) -> dict:
         return {
@@ -53,6 +64,8 @@ class RunResult:
             "assessments": [a.model_dump(mode="json") for a in self.assessments],
             **({"cross_batch_transitions": [t.model_dump(mode="json") for t in self.transitions]}
                if self.transitions else {}),
+            **({"verification": [s.model_dump(mode="json") for s in self.verify_run.summaries]}
+               if self.verify_run is not None else {}),
         }
 
     def by_watch(self, watch_uuid: str) -> list[Assessment]:
@@ -66,7 +79,8 @@ class RunResult:
 def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
                  provider: LLMProvider | None = None, ledger: EvidenceLedger | None = None,
                  validate: bool = True, persist: bool = True,
-                 history: list[JudgementRecord] | None = None, provenance=None) -> RunResult:
+                 history: list[JudgementRecord] | None = None, provenance=None,
+                 verifier=None) -> RunResult:
     """Run the whole chain. The ledger is written only at the very end, after validation passed,
     and only when persist=True and the ledger has a path. The CLI passes persist=False and commits
     the ledger together with the other outputs (see cli._commit_outputs).
@@ -119,17 +133,45 @@ def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
         used_evidence[ev.evidence_id] = ev
         assessments.extend(assess_event(event, t, ev, theses, provider, stats, matches=matches))
 
-    assessments = resolve_conflicts(assessments, used_evidence, stats)
-    transitions: list[JudgementTransition] = []
-    if history is not None:
-        assessments, transitions = resolve_cross_batch(assessments, history, stats)
+    raw_assessments = list(assessments)
+    conflicts_before = stats.conflicts
+
+    def _resolve(raw, lookup):
+        stats.conflicts = conflicts_before
+        resolved = resolve_conflicts(raw, lookup, stats)
+        trans: list[JudgementTransition] = []
+        if history is not None:
+            resolved, trans = resolve_cross_batch(resolved, history, stats)
+        return resolved, trans
+
+    assessments, transitions = _resolve(raw_assessments, used_evidence)
+
+    # R3: bounded evidence gathering for assessments with a concrete doubt (verify/engine.py).
+    verify_run = None
+    if verifier is not None:
+        from .verify.engine import detect_triggers
+        lookup = {i: ledger.get(i) for i in ledger.ids()} | used_evidence
+        items = detect_triggers(assessments, transitions, {e.event_id: e for e in events}, lookup,
+                                {t.thesis_id: t for t in theses})
+        verify_run = verifier.run(items, ledger, sources, stats)
+        for ev in verify_run.new_evidence:
+            used_evidence[ev.evidence_id] = ev
+        if verify_run.new_assessments:
+            lookup = {i: ledger.get(i) for i in ledger.ids()} | used_evidence
+            assessments, transitions = _resolve(raw_assessments + verify_run.new_assessments, lookup)
+        by_id = {v.assessment_id: v.model_dump(mode="json") for v in verify_run.summaries}
+        assessments = [a.model_copy(update={"verification": by_id[a.assessment_id]}) if a.assessment_id in by_id else a
+                       for a in assessments]
     assessments = [recommend(a) for a in assessments]
+    def _ev(a):
+        return used_evidence.get(a.evidence_ids[0]) or ledger.get(a.evidence_ids[0])
+
     run_id = "RUN-" + short_hash(str(meta["from"]), str(meta["to"]), *sorted(used_evidence), length=8)
     new_records = [JudgementRecord(
         run_id=run_id, period_to=meta["to"], assessment_id=a.assessment_id, thesis_id=a.thesis_id,
         assumption_id=a.assumption_id, direction=a.direction, tentative_direction=a.tentative_direction,
-        basis=a.basis, evidence_ids=a.evidence_ids, evidence_grade=used_evidence[a.evidence_ids[0]].grade.value,
-        source_name=used_evidence[a.evidence_ids[0]].source_name) for a in assessments]
+        basis=a.basis, evidence_ids=a.evidence_ids, evidence_grade=_ev(a).grade.value,
+        source_name=_ev(a).source_name) for a in assessments]
 
     provider_name = getattr(provider, "name", None) if provider else None
     # Conflicting evidence may come from earlier batches (history mode): look it up in the ledger.
@@ -138,9 +180,13 @@ def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
     if provenance is None:
         provenance = RunProvenance(input_mode="file", input_origin="file_unverified", data_nature=data_nature(theses))
     provenance = with_model_usage(provenance, provider, assessments)
+    if verifier is not None:
+        provenance = provenance.model_copy(update={
+            "verification": "deterministic_policy",
+            "verification_tool_calls": sum(c.status != "skipped_duplicate" for c in verify_run.calls)})
     brief = build_brief(meta, events, evidence_lookup, assessments, filtered, theses,
                         provider_name, bool(provider and provider.is_mock), transitions=transitions,
-                        provenance=provenance)
+                        provenance=provenance, tool_calls=verify_run.calls if verify_run else None)
     md = render_markdown(brief)
     if validate:
         assert_valid(brief, md, ledger.ids(), {t.thesis_id for t in theses})
@@ -149,4 +195,5 @@ def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
 
     return RunResult(meta=meta, events=events, filtered=filtered, evidence=used_evidence,
                      assessments=assessments, brief=brief, markdown=md, stats=stats,
-                     provider_name=provider_name, transitions=transitions, new_records=new_records)
+                     provider_name=provider_name, transitions=transitions, new_records=new_records,
+                     verify_run=verify_run)

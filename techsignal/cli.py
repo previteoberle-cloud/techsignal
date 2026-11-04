@@ -33,7 +33,8 @@ def _provider(args):
 
 # The ledger lands first and the human-facing brief.md last. Live runs add their captured input and
 # run record in front of these.
-COMMIT_ORDER = ("evidence.jsonl", "judgements.jsonl", "decision_log.json", "brief.json", "brief.md")
+COMMIT_ORDER = ("evidence.jsonl", "judgements.jsonl", "verification_trace.json", "decision_log.json",
+                "brief.json", "brief.md")
 LIVE_FILES = ("source_changes_report.json", "run_record.json")
 
 
@@ -104,7 +105,26 @@ def _fetch_live(args) -> tuple[dict, dict]:
         "incomplete": bool(report.get("incomplete")),
         "techsignal_version": __version__,
     }
-    return report, record
+    return report, record, client
+
+
+def _build_verifier(args, client):
+    """Evidence-gathering tools for this run (R3). Only with --verify; the policy file is mandatory."""
+    from .verify.engine import Verifier
+    from .verify.http import GuardedHTTP
+    from .verify.policy import VerifyPolicy
+    from .verify.tools import CdioSnapshotSearch, GitHubCommitInfo, GitHubFileSearch
+
+    if not args.verify_policy:
+        raise ValueError("--verify 需要同时给出 --verify-policy（补证白名单与限额）")
+    policy = VerifyPolicy.load(Path(args.verify_policy))
+    if client is not None and policy.allow_cdio_tool:
+        policy = policy.with_cdio(client.base_url)
+    http = GuardedHTTP(policy)
+    tools = {"github_file_search": GitHubFileSearch(http), "github_commit_info": GitHubCommitInfo(http)}
+    if client is not None and policy.allow_cdio_tool:
+        tools["cdio_snapshot_search"] = CdioSnapshotSearch(client, policy)
+    return Verifier(policy, tools)
 
 
 def cmd_run(args) -> int:
@@ -119,11 +139,11 @@ def cmd_run(args) -> int:
                 raise ValueError("--cdio-url 需要同时给出 --from")
             if args.input_record:
                 raise ValueError("--input-record 只用于离线回放（--changes）")
-            report, record = _fetch_live(args)
+            report, record, client = _fetch_live(args)
             source = report
             provenance = prov.for_live(record, theses)
         else:
-            report = record = None
+            report = record = client = None
             source = Path(args.changes).read_text(encoding="utf-8")
             capture = Path(args.input_record).read_text(encoding="utf-8") if args.input_record else None
             provenance = prov.for_file(source, theses, capture)
@@ -136,7 +156,8 @@ def cmd_run(args) -> int:
         result = run_pipeline(
             source, theses, SourceRegistry.load(Path(args.sources)),
             provider=provider, ledger=ledger, persist=False,
-            history=history.records if history is not None else None, provenance=provenance)
+            history=history.records if history is not None else None, provenance=provenance,
+            verifier=_build_verifier(args, client) if args.verify else None)
         files = {
             "evidence.jsonl": ledger.serialize(),
             "decision_log.json": canonical_json(result.decision_log()) + "\n",
@@ -145,6 +166,8 @@ def cmd_run(args) -> int:
         }
         if history is not None:
             files["judgements.jsonl"] = history.serialize_with(result.new_records)
+        if result.verify_run is not None:
+            files["verification_trace.json"] = canonical_json(result.verification_trace()) + "\n"
         if record is not None:
             record.update(provider=result.provider_name, provider_is_mock=bool(provider and provider.is_mock),
                           brief_stats=result.brief.stats)
@@ -163,6 +186,10 @@ def cmd_run(args) -> int:
           f"（支持 {s['supports']} / 削弱 {s['weakens']} / 证据不足 {s['insufficient']} / 无关 {s['unrelated']}）")
     print(f"模型层调用 {result.stats.provider_calls} 次（Provider：{result.provider_name or '未配置'}），"
           f"拒绝 {result.stats.provider_rejections}，失败 {result.stats.provider_failures}")
+    if result.verify_run is not None:
+        vr = result.verify_run
+        print(f"补证：{len(vr.summaries)} 项触发，{sum(c.status != 'skipped_duplicate' for c in vr.calls)} 次工具调用，"
+              f"新增证据 {len(vr.new_evidence)} 条；" + "；".join(f"{v.assessment_id}→{v.outcome}" for v in vr.summaries))
     print(f"引用完整性校验：通过；输出目录 {out}")
     return 0
 
@@ -217,6 +244,9 @@ def main(argv=None) -> int:
     r.add_argument("--track-history", action="store_true",
                    help="跨批次模式：保留证据台账与研判历史 judgements.jsonl，并与历史判断比对")
     r.add_argument("--max-lines", type=int, default=200, help="在线模式：每个监测项最多返回的差异行数")
+    r.add_argument("--verify", action="store_true",
+                   help="对存在疑点的研判执行有界补证（确定性策略；需 --verify-policy）")
+    r.add_argument("--verify-policy", help="补证白名单与限额（JSON）")
     r.set_defaults(func=cmd_run)
 
     v = sub.add_parser("validate", help="校验已生成简报的引用完整性")

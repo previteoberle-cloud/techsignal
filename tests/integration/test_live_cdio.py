@@ -104,3 +104,27 @@ def test_live_cdio_real_cross_batch_case(tmp_path):
     b2 = json.loads((out / "batch2" / "decision_log.json").read_text(encoding="utf-8"))
     assert [a["direction"] for a in b1["assessments"]] == ["weakens"]
     assert [t["kind"] for t in b2["cross_batch_transitions"]] == ["unresolved"]
+
+
+@pytest.mark.skipif(os.getenv("TECHSIGNAL_LIVE_NETWORK") != "1", reason="set TECHSIGNAL_LIVE_NETWORK=1 (needs GitHub)")
+def test_live_verification_on_real_case(tmp_path):
+    """R3: real tools against real sources. Asserts the controls, not a particular research answer."""
+    from techsignal.live import run_cross_batch_case
+    case = ROOT / "cases" / "tenstorrent_blackhole" / "case_cross_batch.json"
+    out = tmp_path / "cb"
+    assert run_cross_batch_case(PY, case, out, log_path=tmp_path / "cdio.log") == 0
+    assert not (out / "batch1" / "verification_trace.json").exists() or \
+        json.loads((out / "batch1" / "verification_trace.json").read_text(encoding="utf-8"))["calls"] == []
+    trace = json.loads((out / "batch2" / "verification_trace.json").read_text(encoding="utf-8"))
+    (s,) = trace["summaries"]
+    assert "signal_removed_or_negated" in s["triggers"] and 1 <= len(s["call_ids"]) <= 3
+    allowed = ("http://127.0.0.1:", "https://raw.githubusercontent.com/tenstorrent/tt-metal/",
+               "https://api.github.com/repos/tenstorrent/tt-metal/")
+    for c in trace["calls"]:
+        assert c["url"] is None or c["url"].startswith(allowed)
+        assert c["status"] in ("ok", "not_found", "error", "timeout", "blocked")
+    log = json.loads((out / "batch2" / "decision_log.json").read_text(encoding="utf-8"))
+    orig = next(a for a in log["assessments"] if a["assessment_id"] == s["assessment_id"])
+    assert orig["direction"] == "insufficient" and orig["thesis_status_change"] == "none"
+    if s["outcome"] != "new_decisive_evidence":
+        assert "尚未核实" in s["conclusion"]

@@ -15,6 +15,14 @@
       "name": "Tenstorrent 官方 GitHub 仓库",
       "source_type": "official",
       "grade": "A"
+    },
+    {
+      "domain": "api.github.com",
+      "path_prefix": "/repos/tenstorrent/",
+      "name": "Tenstorrent 官方 GitHub 仓库（提交元数据）",
+      "source_type": "official",
+      "grade": "A",
+      "note": "公开 REST API 返回的官方提交信息"
     }
   ]
 }

@@ -63,17 +63,57 @@ def _signal_first(lines: list[str], signals: list[str]) -> list[str]:
     return hit + [x for x in lines if x not in hit]
 
 
-def _item(a: Assessment, ev: Evidence, event: ChangeEvent, th: Thesis, evidence: dict[str, Evidence]) -> BriefItem:
+_STATUS_ZH = {"ok": "成功", "not_found": "未找到", "error": "失败", "timeout": "超时", "blocked": "被拦截",
+              "unavailable": "不可用", "skipped_duplicate": "重复调用已跳过"}
+
+
+def _verification_statements(a: Assessment, calls_by_id: dict, evidence: dict[str, Evidence]) -> list[Statement]:
+    v = a.verification
+    if not v:
+        return []
+    out = [Statement(kind=K.TRACE, tool_call_ids=v["call_ids"] or ["(无)"],
+                     text=f"触发原因：{', '.join(v['triggers'])}；规划：{v['planner']}；停止原因：{v['stop_reason']}")]
+    for cid in v["call_ids"]:
+        c = calls_by_id.get(cid)
+        if c is None:
+            continue
+        found = f"，匹配 {sum(len(f['lines']) for f in c.findings)} 行" if c.findings else ""
+        err = f"（{c.error}）" if c.error else ""
+        out.append(Statement(kind=K.TRACE, tool_call_ids=[cid], evidence_ids=c.evidence_created + c.evidence_reused,
+                             text=f"{cid} {c.tool}：{c.purpose} → {_STATUS_ZH.get(c.status, c.status)}{found}{err}"
+                                  + (f"；{c.url}" if c.url else "") + (f"；{c.detail}" if c.detail else "")
+                                  + ("；含疑似提示注入的内容已排除" if c.flags else "")))
+    for eid in v["evidence_ids"]:
+        ev = evidence.get(eid)
+        if ev is not None:
+            out.append(Statement(kind=K.FACT, evidence_ids=[eid],
+                                 text=f"补证证据 {eid}（{ev.source_name}，等级 {ev.grade.value}）：「{_display(' / '.join(ev.excerpt_added[:3]))}」"))
+    for h in v["hints"]:
+        out.append(Statement(kind=K.TRACE, tool_call_ids=[h.split("：")[0]], text=h))
+    kind = K.INFERENCE if v["evidence_ids"] else K.QUESTION
+    out.append(Statement(kind=kind, evidence_ids=list(v["evidence_ids"]), basis=Basis.RULE if v["evidence_ids"] else None,
+                         text=f"补证结论：{v['conclusion']}"))
+    return out
+
+
+def _item(a: Assessment, ev: Evidence, event: ChangeEvent, th: Thesis, evidence: dict[str, Evidence],
+          calls_by_id: dict | None = None) -> BriefItem:
     e = [ev.evidence_id]
+    label_add = "补证获取" if ev.obtained_via == "verification_tool" else "新增"
     added = _signal_first(ev.excerpt_added, a.matched_signals)[:MAX_LINES_PER_SIDE]
     removed = _signal_first(ev.excerpt_removed, a.matched_signals)[:MAX_LINES_PER_SIDE]
-    new_info = [Statement(kind=K.FACT, text=f"新增：{_display(x)}", evidence_ids=e) for x in added]
+    new_info = [Statement(kind=K.FACT, text=f"{label_add}：{_display(x)}", evidence_ids=e) for x in added]
     new_info += [Statement(kind=K.FACT, text=f"删除：{_display(x)}", evidence_ids=e) for x in removed]
     hidden = max(0, len(ev.excerpt_added) - MAX_LINES_PER_SIDE) + max(0, len(ev.excerpt_removed) - MAX_LINES_PER_SIDE)
     if hidden:
         new_info.append(Statement(kind=K.FACT, text=f"另有 {hidden} 行变化未在速览中展开，见证据台账", evidence_ids=e))
 
-    sources = [Statement(kind=K.FACT, evidence_ids=e, text=(
+    if ev.obtained_via == "verification_tool":
+        sources = [Statement(kind=K.FACT, evidence_ids=e, tool_call_ids=[ev.tool_call_id or ""], text=(
+            f"{ev.source_name}（{SOURCE_TYPE_ZH[ev.source_type]}）{ev.source_url}；由补证工具调用 {ev.tool_call_id} 获取，"
+            f"触发补证的变化：「{event.title}」（changedetection.io {ev.cdio_difference_path}）"))]
+    else:
+        sources = [Statement(kind=K.FACT, evidence_ids=e, text=(
         f"{ev.source_name}（{SOURCE_TYPE_ZH[ev.source_type]}）{ev.source_url}；changedetection.io 抓取于 {iso(ev.observed_at)}，"
         f"对比其上一次抓取 {iso(ev.baseline_at)}（抓取时间不等于发布时间）；追溯：changedetection.io {ev.cdio_difference_path}"))]
 
@@ -116,16 +156,18 @@ def _item(a: Assessment, ev: Evidence, event: ChangeEvent, th: Thesis, evidence:
         headline=f"{DIRECTION_ZH[a.direction]}｜{th.title}｜{event.title}",
         direction=a.direction, new_info=new_info, sources=sources, thesis_context=ctx, impact=impact,
         reasoning=reasoning, evidence_grade=grades, open_questions=questions, actions=actions,
+        verification=_verification_statements(a, calls_by_id or {}, evidence),
     )
 
 
 def build_brief(meta: dict, events: list[ChangeEvent], evidence: dict[str, Evidence],
                 assessments: list[Assessment], filtered: list[FilteredEvent], theses: list[Thesis],
                 provider_name: str | None, provider_is_mock: bool, transitions: list | None = None,
-                provenance=None) -> Brief:
+                provenance=None, tool_calls: list | None = None) -> Brief:
     ev_by_id = {e.event_id: e for e in events}
     th_by_id = {t.thesis_id: t for t in theses}
 
+    calls_by_id = {c.call_id: c for c in (tool_calls or [])}
     items, unrelated = [], []
     for a in assessments:
         ev = evidence[a.evidence_ids[0]]
@@ -135,7 +177,7 @@ def build_brief(meta: dict, events: list[ChangeEvent], evidence: dict[str, Evide
             unrelated.append(Statement(kind=K.INFERENCE, basis=a.basis, evidence_ids=a.evidence_ids,
                                        text=f"「{event.title}」与{target}无关：{'；'.join(a.rationale)}"))
             continue
-        items.append(_item(a, ev, event, th_by_id[a.thesis_id], evidence))
+        items.append(_item(a, ev, event, th_by_id[a.thesis_id], evidence, calls_by_id))
 
     items.sort(key=lambda i: (i.priority, i.headline, i.item_id))
 
@@ -179,7 +221,7 @@ def build_brief(meta: dict, events: list[ChangeEvent], evidence: dict[str, Evide
 SECTION_TITLES = [
     ("new_info", "新增信息"), ("sources", "来源"), ("thesis_context", "历史结论"), ("impact", "影响方向"),
     ("reasoning", "判断依据"), ("evidence_grade", "证据等级"), ("open_questions", "仍需核实"),
-    ("actions", "建议动作"),
+    ("verification", "补证记录"), ("actions", "建议动作"),
 ]
 
 
@@ -213,6 +255,8 @@ def render_markdown(brief: Brief) -> str:
     for item in brief.items:
         out += [f"### [{item.priority}] {item.headline}", "", f"`{item.item_id}`", ""]
         for attr, title in SECTION_TITLES:
+            if attr == "verification" and not item.verification:
+                continue
             out.append(f"**{title}**")
             out += [render_statement(s) for s in getattr(item, attr)]
             out.append("")

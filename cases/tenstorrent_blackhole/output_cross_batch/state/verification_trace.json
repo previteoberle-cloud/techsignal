@@ -1,0 +1,202 @@
+{
+  "calls": [
+    {
+      "args": {
+        "patterns": [
+          "70B[^|]*\\|[^|]*\\|[^|]*Blackhole"
+        ],
+        "source_url": "https://raw.githubusercontent.com/tenstorrent/tt-metal/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46/README.md",
+        "terms": [
+          "Blackhole",
+          "70B",
+          "QuietBox",
+          "Llama"
+        ],
+        "timestamp": "1793774993",
+        "watch_uuid": "2a5df479-cc65-41c1-a702-0726d4d95388"
+      },
+      "attempts": 1,
+      "call_id": "TC-01",
+      "detail": "changedetection.io 保存的快照（1793774993），原始页面 https://raw.githubusercontent.com/tenstorrent/tt-metal/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46/README.md",
+      "duplicate_of": null,
+      "duration_ms": 4,
+      "error": null,
+      "evidence_created": [
+        "EV-edded20f04"
+      ],
+      "evidence_reused": [],
+      "findings": [
+        {
+          "flagged_injection": false,
+          "lines": [
+            "### [DeepSeek R1 Distill Llama 3.3 70B (TP=8)](./models/tt_transformers)"
+          ],
+          "locator": "line 49"
+        },
+        {
+          "flagged_injection": false,
+          "lines": [
+            "### [Llama 3.1 70B (TP=32)](./models/demos/llama3_70b_galaxy)"
+          ],
+          "locator": "line 53"
+        }
+      ],
+      "flags": [],
+      "for_assessment": "AS-a7e70eb2fa",
+      "http_status": 200,
+      "purpose": "核对同一页面最新快照中是否仍有相关内容（是否只是移动了位置或换了写法）",
+      "status": "ok",
+      "tool": "cdio_snapshot_search",
+      "url": "http://127.0.0.1:37253/api/v1/watch/2a5df479-cc65-41c1-a702-0726d4d95388/history/1793774993"
+    },
+    {
+      "args": {
+        "owner": "tenstorrent",
+        "repo": "tt-metal",
+        "sha": "62f3cd0a4ff2e82d01af500eb5800cfcb6703d46"
+      },
+      "attempts": 1,
+      "call_id": "TC-02",
+      "detail": "",
+      "duplicate_of": null,
+      "duration_ms": 191,
+      "error": "HTTP 403（GitHub API 拒绝或受环境网络策略限制）",
+      "evidence_created": [],
+      "evidence_reused": [],
+      "findings": [],
+      "flags": [],
+      "for_assessment": "AS-a7e70eb2fa",
+      "http_status": 403,
+      "purpose": "读取引起该变化的官方提交说明",
+      "status": "error",
+      "tool": "github_commit_info",
+      "url": "https://api.github.com/repos/tenstorrent/tt-metal/commits/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46"
+    },
+    {
+      "args": {
+        "owner": "tenstorrent",
+        "path": "models/tt_transformers/README.md",
+        "patterns": [
+          "70B[^|]*\\|[^|]*\\|[^|]*Blackhole"
+        ],
+        "ref": "62f3cd0a4ff2e82d01af500eb5800cfcb6703d46",
+        "repo": "tt-metal",
+        "terms": [
+          "Blackhole",
+          "70B",
+          "QuietBox",
+          "Llama"
+        ]
+      },
+      "attempts": 1,
+      "call_id": "TC-03",
+      "detail": "",
+      "duplicate_of": null,
+      "duration_ms": 371,
+      "error": null,
+      "evidence_created": [
+        "EV-d69099674e"
+      ],
+      "evidence_reused": [],
+      "findings": [
+        {
+          "flagged_injection": false,
+          "lines": [
+            "| Model                                                                                            | Hardware                    | <org/name>                                      |",
+            "| [DeepSeek R1 Distill Llama 70B](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Llama-70B)| LoudBox / QuietBox / Galaxy | ```deepseek-ai/DeepSeek-R1-Distill-Llama-70B``` |"
+          ],
+          "locator": "line 8"
+        },
+        {
+          "flagged_injection": false,
+          "lines": [
+            "| Model                                                                                            | Hardware                    | <org/name>                                      |",
+            "| [Llama 3.1 70B](https://huggingface.co/meta-llama/Llama-3.1-70B)                                 | LoudBox / QuietBox / Galaxy | ```meta-llama/Llama-3.1-70B```                  |"
+          ],
+          "locator": "line 10"
+        },
+        {
+          "flagged_injection": false,
+          "lines": [
+            "| Model                                                                                            | Hardware                    | <org/name>                                      |",
+            "| [Llama 3.2 90B Vision](https://huggingface.co/meta-llama/Llama-3.2-90B-Vision)                   | LoudBox / QuietBox          | ```meta-llama/Llama-3.2-90B-Vision```           |"
+          ],
+          "locator": "line 14"
+        },
+        {
+          "flagged_injection": false,
+          "lines": [
+            "##### Repack weights (Llama3.1-70B and Llama3.2-90B from Meta only)"
+          ],
+          "locator": "line 59"
+        },
+        {
+          "flagged_injection": false,
+          "lines": [
+            "Meta's Llama3.1-70B and Llama3.2-90B requires repacked weights. We provide scripts to facilitate this in `models/tt_transformers/scripts/repack_weights_70b.py` and `models/tt_transformers/scripts/repack_weights_90b.py`."
+          ],
+          "locator": "line 60"
+        },
+        {
+          "flagged_injection": false,
+          "lines": [
+            "If providing a different path, please make sure that you keep the string `3.1-70B` or `3.2-90B` in the new path name, since the Llama3 codebase relies on the weights directory name to identify the correct model."
+          ],
+          "locator": "line 63"
+        },
+        {
+          "flagged_injection": false,
+          "lines": [
+            ">huggingface-cli download meta-llama/Meta-Llama-3-70B-Instruct --include \"original/*\" --local-dir Meta-Llama-3-70B-Instruct"
+          ],
+          "locator": "line 78"
+        },
+        {
+          "flagged_injection": false,
+          "lines": [
+            "If you wish to download the weights from [HuggingFace](https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Llama-70B) ensure your model directory has the following structure:"
+          ],
+          "locator": "line 84"
+        }
+      ],
+      "flags": [],
+      "for_assessment": "AS-a7e70eb2fa",
+      "http_status": 200,
+      "purpose": "沿变化内容中的官方链接，在同一仓库同一版本的相关文档中查找",
+      "status": "ok",
+      "tool": "github_file_search",
+      "url": "https://raw.githubusercontent.com/tenstorrent/tt-metal/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46/models/tt_transformers/README.md"
+    }
+  ],
+  "new_evidence_ids": [
+    "EV-edded20f04",
+    "EV-d69099674e"
+  ],
+  "note": "补证由确定性策略触发、规划和执行；没有任何大模型参与决策。每条记录对应一次实际执行（或被拦截/去重）的工具调用。",
+  "summaries": [
+    {
+      "assessment_id": "AS-a7e70eb2fa",
+      "assumption_id": "BH1",
+      "call_ids": [
+        "TC-01",
+        "TC-02",
+        "TC-03"
+      ],
+      "conclusion": "TH-TT-001·BH1：补证找到相关官方内容 EV-edded20f04, EV-d69099674e，但没有命中任何判定规则，无法区分原因；保持「尚未核实」",
+      "evidence_ids": [
+        "EV-edded20f04",
+        "EV-d69099674e"
+      ],
+      "hints": [],
+      "new_assessment_ids": [],
+      "outcome": "related_evidence_no_direction",
+      "planner": "deterministic",
+      "stop_reason": "plan_completed",
+      "thesis_id": "TH-TT-001",
+      "triggers": [
+        "cross_batch_unresolved",
+        "signal_removed_or_negated"
+      ]
+    }
+  ]
+}

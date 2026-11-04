@@ -153,6 +153,10 @@ class LiveCdio:
         return {"uuid": uuid, "snapshot_timestamps": snaps}
 
 
+def _verify_args(case: dict, base: Path) -> list[str]:
+    return ["--verify", "--verify-policy", str(base / case["verify_policy"])] if case.get("verify_policy") else []
+
+
 def run_case(python: str, case_path: Path, out: Path, log_path: Path | None = None) -> int:
     """Observe a case's real versions in a live changedetection.io and run the full pipeline on them."""
     from .cli import main as cli_main
@@ -166,7 +170,7 @@ def run_case(python: str, case_path: Path, out: Path, log_path: Path | None = No
         try:
             rc = cli_main(["run", "--cdio-url", cdio.url, "--from", str(obs["snapshot_timestamps"][0] - 1),
                            "--uuids", obs["uuid"], "--theses", str(base / case["theses"]),
-                           "--sources", str(base / case["sources"]), "--out", str(out)])
+                           "--sources", str(base / case["sources"]), "--out", str(out)] + _verify_args(case, base))
         finally:
             os.environ.pop("TECHSIGNAL_CDIO_API_KEY", None)
         cdio_version = cdio.client.system_info().get("version")
@@ -206,7 +210,7 @@ def run_cross_batch_case(python: str, case_path: Path, out: Path, log_path: Path
                 rc = cli_main(["run", "--cdio-url", cdio.url, "--from", str(ts[a]), "--to", str(ts[b]),
                                "--uuids", obs["uuid"], "--max-lines", "2000", "--track-history",
                                "--theses", str(base / case["theses"]), "--sources", str(base / case["sources"]),
-                               "--out", str(state)])
+                               "--out", str(state)] + _verify_args(case, base))
                 if rc != 0:
                     return rc
                 snap = out / f"batch{n}"

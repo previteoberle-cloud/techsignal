@@ -1,9 +1,10 @@
 {
   "disclaimers": [
     "本速览由 TechSignal 研究原型生成，不构成投资建议。研究结论不会因新信息自动改变，「削弱」只触发人工复核建议。",
-    "输入：TechSignal 于 2026-11-04T06:35:58Z 通过 REST API 在线拉取 changedetection.io 0.60.10（http://127.0.0.1:46777）的变化数据（GET /api/v1/changes）。",
+    "输入：TechSignal 于 2026-11-04T06:49:24Z 通过 REST API 在线拉取 changedetection.io 0.60.10（http://127.0.0.1:38951）的变化数据（GET /api/v1/changes）。",
     "数据性质：真实公开资料。",
-    "模型层：未配置；本速览中的判断全部由确定性规则作出。"
+    "模型层：未配置；本速览中的判断全部由确定性规则作出。",
+    "补证：由确定性策略触发并选择工具，共实际执行 0 次工具调用（HTTP 请求，地址与结果见 verification_trace.json）；没有使用大模型决策。"
   ],
   "filtered": [],
   "items": [
@@ -14,7 +15,8 @@
           "evidence_ids": [],
           "kind": "action",
           "text": "建议研究负责人复核 TH-TT-001 的假设 BH1；系统未修改结论状态",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         }
       ],
       "direction": "weakens",
@@ -22,11 +24,12 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
-          "text": "EV-43c4e1797e：A｜公司官方一手披露",
-          "thesis_ids": []
+          "text": "EV-3b3bf73684：A｜公司官方一手披露",
+          "thesis_ids": [],
+          "tool_call_ids": []
         }
       ],
       "headline": "削弱历史判断｜Tenstorrent Blackhole 大模型推理软件成熟度｜Tenstorrent tt-metal README（官方 GitHub）",
@@ -34,11 +37,12 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "inference",
           "text": "影响方向：削弱历史判断；置信度 high；判定层：确定性规则",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         },
         {
           "basis": null,
@@ -47,109 +51,121 @@
           "text": "结论状态保持「active」，系统不会因新信息自动修改历史结论",
           "thesis_ids": [
             "TH-TT-001"
-          ]
+          ],
+          "tool_call_ids": []
         }
       ],
-      "item_id": "AS-9e636218f0",
+      "item_id": "AS-e552fd4f2c",
       "new_info": [
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
           "text": "新增：| Llama 3.1 70B (TP=4) | 32 | QuietBox (Blackhole) | 195* | 14.9* | | 476.5* | v0.59.0-rc53 | f028da1 |",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         },
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
           "text": "新增：| Qwen 3 32B (TP=8) | 32 | QuietBox (Wormhole) | 109 | 22.1 | 30 | 707.2 | v0.59.0-rc52 | f028da1 |",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         },
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
           "text": "新增：| QwQ 32B (TP=8) | 32 | QuietBox (Wormhole) | 133 | 25.2 | 30 | 806.4 | v0.56.0-rc51 | e2e0002 |",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         },
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
           "text": "新增：| DeepSeek R1 Distill Llama 3.3 70B (TP=8) | 32 | QuietBox (Wormhole) | 159 | 15.9 | 20 | 508.8 | v0.59.0-rc53 | f028da1 |",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         },
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
           "text": "新增：| Llama 3.1 70B (TP=8) | 32 | QuietBox (Wormhole) | 159 | 15.9 | 20 | 508.8 | v0.59.0-rc53 | f028da1 |",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         },
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
           "text": "删除：| Qwen 3 32B (TP=8) | 32 | QuietBox | 109 | 22.1 | 30 | 707.2 | v0.59.0-rc52 | f028da1 |",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         },
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
           "text": "删除：| QwQ 32B (TP=8) | 32 | QuietBox | 133 | 25.2 | 30 | 806.4 | v0.56.0-rc51 | e2e0002 |",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         },
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
           "text": "删除：| DeepSeek R1 Distill Llama 3.3 70B (TP=8) | 32 | QuietBox | 159 | 15.9 | 20 | 508.8 | v0.59.0-rc53 | f028da1 |",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         },
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
           "text": "删除：| Llama 3.1 70B (TP=8) | 32 | QuietBox | 159 | 15.9 | 20 | 508.8 | v0.59.0-rc53 | f028da1 |",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         },
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
           "text": "删除：| Qwen 2.5 72B (TP=8) | 32 | QuietBox | 319 | 14.6 | 20 | 467.2 | v0.59.0-rc52 | f028da1 |",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         },
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
           "text": "另有 11 行变化未在速览中展开，见证据台账",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         }
       ],
       "open_questions": [
@@ -158,7 +174,8 @@
           "evidence_ids": [],
           "kind": "question",
           "text": "无",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         }
       ],
       "priority": "P1",
@@ -166,22 +183,24 @@
         {
           "basis": "rule",
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "inference",
           "text": "规则层：BH1·削弱信号「70B[^|]*\\|[^|]*\\|[^|]*Blackhole」出现在新增内容：| Llama 3.1 70B (TP=4) | 32 | QuietBox (Blackhole) | 195* | 14.9* | | 476.5* | v0.59.0-rc53 | f028da1 |",
-          "thesis_ids": []
+          "thesis_ids": [],
+          "tool_call_ids": []
         }
       ],
       "sources": [
         {
           "basis": null,
           "evidence_ids": [
-            "EV-43c4e1797e"
+            "EV-3b3bf73684"
           ],
           "kind": "fact",
-          "text": "Tenstorrent 官方 GitHub 仓库（raw）（公司官方）https://raw.githubusercontent.com/tenstorrent/tt-metal/168a956a09755190e9cb46b3556bf7c1314e5ff1/README.md；changedetection.io 抓取于 2026-11-04 06:35 UTC，对比其上一次抓取 2026-11-04 06:35 UTC（抓取时间不等于发布时间）；追溯：changedetection.io /api/v1/watch/b71a0c08-66b6-4bd9-aebe-77f419e63b54/difference/1793774155/1793774158",
-          "thesis_ids": []
+          "text": "Tenstorrent 官方 GitHub 仓库（raw）（公司官方）https://raw.githubusercontent.com/tenstorrent/tt-metal/168a956a09755190e9cb46b3556bf7c1314e5ff1/README.md；changedetection.io 抓取于 2026-11-04 06:49 UTC，对比其上一次抓取 2026-11-04 06:49 UTC（抓取时间不等于发布时间）；追溯：changedetection.io /api/v1/watch/809368ae-e0bf-4819-ab1d-dd0c35ae394c/difference/1793774962/1793774964",
+          "thesis_ids": [],
+          "tool_call_ids": []
         }
       ],
       "thesis_context": [
@@ -192,7 +211,8 @@
           "text": "Tenstorrent Blackhole 大模型推理软件成熟度：截至 2025-07-11，Tenstorrent 官方 tt-metal 模型表中，Blackhole 平台仅有 Llama 3.1 8B（p100/p150）的数据，且均标注为初步（* Blackhole software optimization is under active development），没有 70B 级模型记录；据此判断 Blackhole 的大模型推理软件支持仍处早期，70B 级模型的官方部署依托 Wormhole 平台（QuietBox / Galaxy）。（截至 2025-07-11，负责人 TechSignal 演示（依据公开资料整理，AI 辅助））",
           "thesis_ids": [
             "TH-TT-001"
-          ]
+          ],
+          "tool_call_ids": []
         },
         {
           "basis": null,
@@ -201,7 +221,8 @@
           "text": "结论依据 SRC-TT-1：Tenstorrent（tt-metal 官方仓库），2025-07-11T16:33:05+00:00（提交 4cd196f3ce），「| Llama 3.1 8B | 32 | p150 | 69* | 29.1* | | 931.2* | v0.59.0-rc3 | 739dcaa |」（https://github.com/tenstorrent/tt-metal/blob/4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1/README.md）",
           "thesis_ids": [
             "TH-TT-001"
-          ]
+          ],
+          "tool_call_ids": []
         },
         {
           "basis": null,
@@ -210,7 +231,8 @@
           "text": "结论依据 SRC-TT-2：Tenstorrent（tt-metal 官方仓库），2025-07-11T16:33:05+00:00（提交 4cd196f3ce），「\\* Blackhole software optimization is under active development.」（https://github.com/tenstorrent/tt-metal/blob/4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1/README.md）",
           "thesis_ids": [
             "TH-TT-001"
-          ]
+          ],
+          "tool_call_ids": []
         },
         {
           "basis": null,
@@ -219,26 +241,28 @@
           "text": "相关假设 BH1：Blackhole 平台上尚无 70B 级大模型的官方性能记录",
           "thesis_ids": [
             "TH-TT-001"
-          ]
+          ],
+          "tool_call_ids": []
         }
-      ]
+      ],
+      "verification": []
     }
   ],
   "mock_used": false,
-  "period_from": 1793774154,
-  "period_to": 1793774158,
+  "period_from": 1793774961,
+  "period_to": 1793774964,
   "provenance": {
-    "cdio_base_url": "http://127.0.0.1:46777",
+    "cdio_base_url": "http://127.0.0.1:38951",
     "cdio_version": "0.60.10",
     "data_nature": "public",
-    "fetched_at_utc": "2026-11-04T06:35:58Z",
+    "fetched_at_utc": "2026-11-04T06:49:24Z",
     "input_mode": "live_cdio_api",
     "input_origin": "live_cdio_api",
     "model_judgements": 0,
     "model_layer": "none",
     "model_name": null,
-    "report_sha256": "22f22038a68d18cdbccf8674f3016d0e5ddbe165b2d28bc77927681492ba33e0",
-    "verification": "off",
+    "report_sha256": "030cb3875a786f757dd21767d5068c1c5bcb16c157d437e7a628e53b6b574e75",
+    "verification": "deterministic_policy",
     "verification_tool_calls": 0
   },
   "stats": {

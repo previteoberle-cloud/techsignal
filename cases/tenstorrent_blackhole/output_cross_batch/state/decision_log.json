@@ -1,15 +1,15 @@
 {
   "assessments": [
     {
-      "assessment_id": "AS-4d73aaa190",
+      "assessment_id": "AS-a7e70eb2fa",
       "assumption_id": "BH1",
       "basis": "rule",
       "confidence": "low",
       "conflicting_evidence_ids": [],
       "direction": "insufficient",
-      "event_id": "CE-ffeff859c9",
+      "event_id": "CE-3473cc1da7",
       "evidence_ids": [
-        "EV-5799d2f2db"
+        "EV-7087dcdddb"
       ],
       "limitations": [],
       "matched_signals": [
@@ -27,20 +27,44 @@
       "recommended_action": "列入待核实清单，补充一手来源后重新评估；在此之前不调整结论",
       "tentative_direction": null,
       "thesis_id": "TH-TT-001",
-      "thesis_status_change": "none"
+      "thesis_status_change": "none",
+      "verification": {
+        "assessment_id": "AS-a7e70eb2fa",
+        "assumption_id": "BH1",
+        "call_ids": [
+          "TC-01",
+          "TC-02",
+          "TC-03"
+        ],
+        "conclusion": "TH-TT-001·BH1：补证找到相关官方内容 EV-edded20f04, EV-d69099674e，但没有命中任何判定规则，无法区分原因；保持「尚未核实」",
+        "evidence_ids": [
+          "EV-edded20f04",
+          "EV-d69099674e"
+        ],
+        "hints": [],
+        "new_assessment_ids": [],
+        "outcome": "related_evidence_no_direction",
+        "planner": "deterministic",
+        "stop_reason": "plan_completed",
+        "thesis_id": "TH-TT-001",
+        "triggers": [
+          "cross_batch_unresolved",
+          "signal_removed_or_negated"
+        ]
+      }
     }
   ],
   "cross_batch_transitions": [
     {
       "after_evidence_ids": [
-        "EV-5799d2f2db"
+        "EV-7087dcdddb"
       ],
       "after_state": "证据不足",
       "assumption_id": "BH1",
       "before_evidence_ids": [
-        "EV-0f9b1f3844"
+        "EV-695a70f12d"
       ],
-      "before_run_id": "RUN-e42bad51",
+      "before_run_id": "RUN-fd0f5ed9",
       "before_state": "削弱",
       "explanation": "新变化涉及该假设但无法判定方向（如相关内容被删除、处于否定语境），保留历史判断并标记待核实",
       "kind": "unresolved",
@@ -50,26 +74,26 @@
   "filtered": [],
   "meta": {
     "changes_total": 1,
-    "from": 1793774185,
+    "from": 1793774991,
     "incomplete": false,
     "mode": "net_change",
     "monitors_checked": 1,
-    "to": 1793774187,
+    "to": 1793774993,
     "total": 1
   },
   "provenance": {
-    "cdio_base_url": "http://127.0.0.1:48715",
+    "cdio_base_url": "http://127.0.0.1:37253",
     "cdio_version": "0.60.10",
     "data_nature": "public",
-    "fetched_at_utc": "2026-11-04T06:36:27Z",
+    "fetched_at_utc": "2026-11-04T06:49:54Z",
     "input_mode": "live_cdio_api",
     "input_origin": "live_cdio_api",
     "model_judgements": 0,
     "model_layer": "none",
     "model_name": null,
-    "report_sha256": "8ee6d559ab597ce8c301ccee26569a949440e718bdb508c49a131717a517429e",
-    "verification": "off",
-    "verification_tool_calls": 0
+    "report_sha256": "aafcaecfb430754a317cfb4c099e055024fc33e883bf39af4216a5a3d91b2ae0",
+    "verification": "deterministic_policy",
+    "verification_tool_calls": 3
   },
   "provider": null,
   "stats": {
@@ -80,5 +104,31 @@
     "provider_failures": 0,
     "provider_rejections": 0,
     "rule_decisions": 0
-  }
+  },
+  "verification": [
+    {
+      "assessment_id": "AS-a7e70eb2fa",
+      "assumption_id": "BH1",
+      "call_ids": [
+        "TC-01",
+        "TC-02",
+        "TC-03"
+      ],
+      "conclusion": "TH-TT-001·BH1：补证找到相关官方内容 EV-edded20f04, EV-d69099674e，但没有命中任何判定规则，无法区分原因；保持「尚未核实」",
+      "evidence_ids": [
+        "EV-edded20f04",
+        "EV-d69099674e"
+      ],
+      "hints": [],
+      "new_assessment_ids": [],
+      "outcome": "related_evidence_no_direction",
+      "planner": "deterministic",
+      "stop_reason": "plan_completed",
+      "thesis_id": "TH-TT-001",
+      "triggers": [
+        "cross_batch_unresolved",
+        "signal_removed_or_negated"
+      ]
+    }
+  ]
 }

@@ -46,6 +46,8 @@ def validate_brief(brief: Brief, evidence_ids: set[str], thesis_ids: set[str]) -
         if s.kind in (K.FACT, K.INFERENCE) and not s.evidence_ids:
             code = "FACT_WITHOUT_EVIDENCE" if s.kind == K.FACT else "INFERENCE_WITHOUT_EVIDENCE"
             issues.append(Issue(code, where, f"缺少证据编号：{snippet}"))
+        if s.kind == K.TRACE and not s.tool_call_ids:
+            issues.append(Issue("TRACE_WITHOUT_TOOL_CALL", where, f"补证记录缺少工具调用编号：{snippet}"))
         if s.kind == K.CONTEXT and not s.thesis_ids:
             issues.append(Issue("CONTEXT_WITHOUT_THESIS", where, f"缺少研究判断编号：{snippet}"))
         for eid in s.evidence_ids:

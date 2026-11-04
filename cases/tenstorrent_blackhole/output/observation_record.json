@@ -2,7 +2,7 @@
   "case_id": "tenstorrent-blackhole-70b",
   "note": "真实 changedetection.io 实例依次抓取下列已发布版本（按提交固定的 URL）。快照时间戳是抓取时间，发布日期取自 git 提交记录。",
   "changedetection_version": "0.60.10",
-  "watch_uuid": "b71a0c08-66b6-4bd9-aebe-77f419e63b54",
+  "watch_uuid": "809368ae-e0bf-4819-ab1d-dd0c35ae394c",
   "observations": [
     {
       "label": "Blackhole 70B 条目加入前",
@@ -10,7 +10,7 @@
       "commit_date": "2025-07-11T16:33:05+00:00",
       "url": "https://raw.githubusercontent.com/tenstorrent/tt-metal/4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1/README.md",
       "browse_url": "https://github.com/tenstorrent/tt-metal/blob/4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1/README.md",
-      "snapshot_timestamp": 1793774155
+      "snapshot_timestamp": 1793774962
     },
     {
       "label": "加入 Llama 3.1 70B (TP=4) QuietBox (Blackhole) 条目",
@@ -18,7 +18,7 @@
       "commit_date": "2025-07-11T17:16:57+00:00",
       "url": "https://raw.githubusercontent.com/tenstorrent/tt-metal/168a956a09755190e9cb46b3556bf7c1314e5ff1/README.md",
       "browse_url": "https://github.com/tenstorrent/tt-metal/commit/168a956a09755190e9cb46b3556bf7c1314e5ff1",
-      "snapshot_timestamp": 1793774158
+      "snapshot_timestamp": 1793774964
     }
   ]
 }

@@ -1,0 +1,19 @@
+{
+  "allow": [
+    {
+      "host": "raw.githubusercontent.com",
+      "path_prefix": "/tenstorrent/tt-metal/",
+      "note": "官方仓库文件（按版本）"
+    },
+    {
+      "host": "api.github.com",
+      "path_prefix": "/repos/tenstorrent/tt-metal/",
+      "note": "官方仓库提交元数据（公开 REST API）"
+    }
+  ],
+  "max_calls_per_item": 3,
+  "max_calls_per_run": 10,
+  "timeout_seconds": 15,
+  "retries": 1,
+  "github_token_env": "GITHUB_TOKEN"
+}

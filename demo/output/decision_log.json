@@ -24,7 +24,8 @@
       "recommended_action": "记录为 TH-001·A2 的支持证据，维持原结论",
       "tentative_direction": null,
       "thesis_id": "TH-001",
-      "thesis_status_change": "none"
+      "thesis_status_change": "none",
+      "verification": null
     },
     {
       "assessment_id": "AS-d38a53b6aa",
@@ -56,7 +57,8 @@
       "recommended_action": "列入待核实清单，补充一手来源后重新评估；在此之前不调整结论",
       "tentative_direction": "supports",
       "thesis_id": "TH-001",
-      "thesis_status_change": "none"
+      "thesis_status_change": "none",
+      "verification": null
     },
     {
       "assessment_id": "AS-f458f2fa0a",
@@ -82,7 +84,8 @@
       "recommended_action": "建议研究负责人复核 TH-002 的假设 B1；系统未修改结论状态",
       "tentative_direction": null,
       "thesis_id": "TH-002",
-      "thesis_status_change": "none"
+      "thesis_status_change": "none",
+      "verification": null
     },
     {
       "assessment_id": "AS-cd8ac0e4e9",
@@ -106,7 +109,8 @@
       "recommended_action": "无需动作",
       "tentative_direction": null,
       "thesis_id": "TH-001",
-      "thesis_status_change": "none"
+      "thesis_status_change": "none",
+      "verification": null
     },
     {
       "assessment_id": "AS-c2b1147551",
@@ -130,7 +134,8 @@
       "recommended_action": "无需动作",
       "tentative_direction": null,
       "thesis_id": null,
-      "thesis_status_change": "none"
+      "thesis_status_change": "none",
+      "verification": null
     },
     {
       "assessment_id": "AS-ced7b459fe",
@@ -162,7 +167,8 @@
       "recommended_action": "列入待核实清单，补充一手来源后重新评估；在此之前不调整结论",
       "tentative_direction": "weakens",
       "thesis_id": "TH-001",
-      "thesis_status_change": "none"
+      "thesis_status_change": "none",
+      "verification": null
     },
     {
       "assessment_id": "AS-0686d5899d",
@@ -192,7 +198,8 @@
       "recommended_action": "列入待核实清单，补充一手来源后重新评估；在此之前不调整结论",
       "tentative_direction": "weakens",
       "thesis_id": "TH-001",
-      "thesis_status_change": "none"
+      "thesis_status_change": "none",
+      "verification": null
     },
     {
       "assessment_id": "AS-626297d9f6",
@@ -218,7 +225,8 @@
       "recommended_action": "建议研究负责人复核 TH-002 的假设 B2；系统未修改结论状态",
       "tentative_direction": null,
       "thesis_id": "TH-002",
-      "thesis_status_change": "none"
+      "thesis_status_change": "none",
+      "verification": null
     }
   ],
   "filtered": [

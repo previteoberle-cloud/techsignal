@@ -1,15 +1,15 @@
 {
   "assessments": [
     {
-      "assessment_id": "AS-9e636218f0",
+      "assessment_id": "AS-e552fd4f2c",
       "assumption_id": "BH1",
       "basis": "rule",
       "confidence": "high",
       "conflicting_evidence_ids": [],
       "direction": "weakens",
-      "event_id": "CE-71fc44b3e6",
+      "event_id": "CE-8362a2530b",
       "evidence_ids": [
-        "EV-43c4e1797e"
+        "EV-3b3bf73684"
       ],
       "limitations": [],
       "matched_signals": [
@@ -24,31 +24,32 @@
       "recommended_action": "建议研究负责人复核 TH-TT-001 的假设 BH1；系统未修改结论状态",
       "tentative_direction": null,
       "thesis_id": "TH-TT-001",
-      "thesis_status_change": "none"
+      "thesis_status_change": "none",
+      "verification": null
     }
   ],
   "filtered": [],
   "meta": {
     "changes_total": 1,
-    "from": 1793774154,
+    "from": 1793774961,
     "incomplete": false,
     "mode": "net_change",
     "monitors_checked": 1,
-    "to": 1793774158,
+    "to": 1793774964,
     "total": 1
   },
   "provenance": {
-    "cdio_base_url": "http://127.0.0.1:46777",
+    "cdio_base_url": "http://127.0.0.1:38951",
     "cdio_version": "0.60.10",
     "data_nature": "public",
-    "fetched_at_utc": "2026-11-04T06:35:58Z",
+    "fetched_at_utc": "2026-11-04T06:49:24Z",
     "input_mode": "live_cdio_api",
     "input_origin": "live_cdio_api",
     "model_judgements": 0,
     "model_layer": "none",
     "model_name": null,
-    "report_sha256": "22f22038a68d18cdbccf8674f3016d0e5ddbe165b2d28bc77927681492ba33e0",
-    "verification": "off",
+    "report_sha256": "030cb3875a786f757dd21767d5068c1c5bcb16c157d437e7a628e53b6b574e75",
+    "verification": "deterministic_policy",
     "verification_tool_calls": 0
   },
   "provider": null,
@@ -60,5 +61,6 @@
     "provider_failures": 0,
     "provider_rejections": 0,
     "rule_decisions": 1
-  }
+  },
+  "verification": []
 }

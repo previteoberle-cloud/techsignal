@@ -8,6 +8,7 @@ Stdlib only (urllib). Endpoints used, all read from this repository:
   PUT  /api/v1/watch/{uuid}
   DELETE /api/v1/watch/{uuid}
   GET  /api/v1/watch/{uuid}/history             {timestamp: snapshot path}
+  GET  /api/v1/watch/{uuid}/history/{timestamp} snapshot text
   GET  /api/v1/changes?format=json&...          api/Changes.py, paginated with limit/offset
 
 Auth: the `x-api-key` header (api/auth.py); a wrong key answers 403.
@@ -180,6 +181,11 @@ class ChangeDetectionClient:
 
     def recheck(self, uuid: str) -> None:
         self._request("GET", f"/api/v1/watch/{uuid}", {"recheck": "1"})
+
+    def get_snapshot(self, uuid: str, timestamp: str) -> str:
+        """Text of one stored snapshot (GET /api/v1/watch/{uuid}/history/{timestamp})."""
+        body = self._request("GET", f"/api/v1/watch/{uuid}/history/{timestamp}", expect_json=False)
+        return body.decode("utf-8", errors="replace")
 
     def history(self, uuid: str) -> dict:
         return self._expect_dict(self._request("GET", f"/api/v1/watch/{uuid}/history"), "history")

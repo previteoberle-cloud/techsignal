@@ -37,5 +37,6 @@
       1,
       2
     ]
-  ]
+  ],
+  "verify_policy": "verify_policy.json"
 }

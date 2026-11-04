@@ -189,6 +189,10 @@ class Evidence(_Strict):
     cdio_watch_uuid: str
     cdio_history_path: str
     cdio_difference_path: str
+    # R3: "verification_tool" = fetched by an evidence-gathering tool call (tool_call_id); the cdio_*
+    # fields then point at the change that triggered the verification.
+    obtained_via: Literal["cdio_change", "verification_tool"] = "cdio_change"
+    tool_call_id: str | None = None
 
 
 class Assessment(_Strict):
@@ -212,6 +216,7 @@ class Assessment(_Strict):
     recommended_action: str = ""
     # R1 never changes a thesis on its own. A human decides; we only recommend a review.
     thesis_status_change: Literal["none"] = "none"
+    verification: dict | None = None   # R3: summary of the evidence-gathering run for this item
 
 
 class JudgementRecord(_Strict):
@@ -261,6 +266,7 @@ class StatementKind(StrEnum):
     SPECULATION = "speculation"  # explicitly marked as conjecture, no citation required
     QUESTION = "question"        # open question for follow-up
     ACTION = "action"            # recommended next step
+    TRACE = "trace"              # what a verification tool call did - must cite its tool call id
 
 
 class Statement(_Strict):
@@ -268,6 +274,7 @@ class Statement(_Strict):
     text: str
     evidence_ids: list[str] = Field(default_factory=list)
     thesis_ids: list[str] = Field(default_factory=list)
+    tool_call_ids: list[str] = Field(default_factory=list)
     basis: Basis | None = None
 
 
@@ -284,10 +291,11 @@ class BriefItem(_Strict):
     evidence_grade: list[Statement]
     open_questions: list[Statement]
     actions: list[Statement]
+    verification: list[Statement] = Field(default_factory=list)
 
     def all_statements(self) -> list[Statement]:
         return (self.new_info + self.sources + self.thesis_context + self.impact + self.reasoning
-                + self.evidence_grade + self.open_questions + self.actions)
+                + self.evidence_grade + self.open_questions + self.verification + self.actions)
 
 
 class Brief(_Strict):

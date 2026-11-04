@@ -97,10 +97,16 @@ def test_real_cross_batch_replay(tmp_path):
     assert (a["assumption_id"], a["direction"], a["basis"]) == ("BH1", "insufficient", "rule")
     (t,) = log["cross_batch_transitions"]
     assert (t["kind"], t["before_state"], t["after_state"]) == ("unresolved", "削弱", "证据不足")
-    for f in ("judgements.jsonl", "evidence.jsonl"):
-        assert (out / f).read_text(encoding="utf-8") == (CB / "batch2" / f).read_text(encoding="utf-8"), f
+    # R3: the live run also gathered evidence (--verify), the replay does not; compare what came from
+    # the changes themselves.
+    def change_evidence(path):
+        return [x for x in (path / "evidence.jsonl").read_text(encoding="utf-8").splitlines()
+                if json.loads(x).get("obtained_via", "cdio_change") == "cdio_change"]
+    assert change_evidence(out) == change_evidence(CB / "batch2")
     live_log = json.loads((CB / "batch2" / "decision_log.json").read_text(encoding="utf-8"))
-    assert log["assessments"] == live_log["assessments"]
+    strip = lambda a: {k: v for k, v in a.items() if k != "verification"}  # noqa: E731
+    assert [strip(a) for a in log["assessments"]] == [strip(a) for a in live_log["assessments"]]
+    assert live_log["verification"] and "verification" not in log
     assert log["cross_batch_transitions"] == live_log["cross_batch_transitions"]
     assert (log["provenance"]["input_origin"], live_log["provenance"]["input_origin"]) == \
         ("replay_of_captured_live", "live_cdio_api")
@@ -110,5 +116,7 @@ def test_real_cross_batch_replay(tmp_path):
 def test_real_cross_batch_versions_are_the_recorded_commits():
     obs = json.loads((CB / "observation_record.json").read_text(encoding="utf-8"))
     assert [b["to_version"][:7] for b in obs["batches"]] == ["168a956", "62f3cd0"]
-    removed = json.loads((CB / "batch2" / "evidence.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+    lines = [json.loads(x) for x in (CB / "batch2" / "evidence.jsonl").read_text(encoding="utf-8").splitlines()]
+    # R3: the batch-2 ledger also holds evidence fetched by verification tools; take the change itself
+    removed = [e for e in lines if e.get("obtained_via", "cdio_change") == "cdio_change"][-1]
     assert any("70B (TP=4)" in x and "QuietBox (Blackhole)" in x for x in removed["excerpt_removed"])
