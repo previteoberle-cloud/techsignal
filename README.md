@@ -24,7 +24,20 @@
 
 ### 启动
 
-**Windows：** 安装 Python 3.11 或以上（安装时勾选「Add python.exe to PATH」），下载或克隆本仓库后，双击 `scripts\start_windows.bat`。第一次运行会自动创建虚拟环境并安装依赖，之后浏览器打开 http://localhost:8501 。
+**Windows：**
+
+1. 从 python.org 安装 Python 3.11 或以上，安装时勾选「Add python.exe to PATH」。
+2. 下载或克隆本仓库，然后双击 `scripts\start_windows.bat`。
+
+脚本的行为：
+- 依次查找 `py` 启动器和 `python`。找不到 Python，或版本低于 3.11，会明确提示并停止。
+- 第一次运行时，在项目目录下创建 `.venv` 并安装依赖；安装失败会停止，不会假装启动成功。上次安装没有完成的，会自动重新安装。
+- 不会改动或删除采集数据。
+- 浏览器打开 http://localhost:8501 。如果端口被占用，Streamlit 会换一个端口，以命令行窗口里显示的为准。
+
+**注意：** Windows 脚本只做过静态检查，以及在 Linux 上执行它调用的命令（包括带空格和中文的数据目录），**还没有在真实 Windows 上验收**。
+
+工作台默认只监听本机（127.0.0.1），局域网和公网都访问不到。它没有登录功能，不要通过 `--server.address 0.0.0.0` 暴露出去。
 
 也可以在 PowerShell 中手动执行：
 
@@ -54,7 +67,8 @@ python -m techsignal.workbench
 ### 数据保存在哪里
 
 - 默认在 `~/.techsignal/collector`，Windows 上是 `C:\Users\<你的用户名>\.techsignal\collector`。用环境变量 `TECHSIGNAL_COLLECTOR_ROOT` 可以改到别的目录。
-- 每个任务一个目录：`task.json`（任务定义）、`items.jsonl`（采集到的信息，只追加）、`status.json`（各来源状态）、`pages/`（网页上次的文字）。
+- 每个任务一个目录：`task.json`（任务定义）、`items.jsonl`（采集到的信息，只追加）、`status.json`（各来源状态）、`pages/`（网页上次的文字）。批量采集的日志在 `logs/collect.log`。
+- 写入顺序先归档、后更新网页快照。归档失败时，下次采集会重新发现这次变化；快照更新失败时，也不会重复归档。
 - 重启工作台后，历史数据都还在。
 
 不打开浏览器也可以用命令行：
@@ -62,7 +76,37 @@ python -m techsignal.workbench
 ```bash
 python -m techsignal.collector list
 python -m techsignal.collector collect <任务编号>
+python -m techsignal.collector collect-all
 python -m techsignal.collector export <任务编号> --csv out.csv --md out.md
+```
+
+`collect-all` 依次采集全部任务，并把结果追加到 `<数据目录>/logs/collect.log`（日志超过约 1 MB 时会轮换）。
+- **退出码：** 全部成功时为 0；有来源失败，或有任务因正在被另一次采集处理而被跳过时，为 1。
+- **失败不影响其他：** 某个来源或任务失败，不会影响其他任务，也不会损坏历史记录。
+- **同一任务不会并发采集：** 同一个任务同时只允许一次采集，另一次会跳过并写入日志。
+
+### 定时自动采集（可选，默认关闭）
+
+使用 Windows 自带的任务计划程序，不需要常驻服务。只有你手动执行 `enable`，才会创建计划任务：
+
+```bat
+scripts\windows_schedule.bat enable 6
+scripts\windows_schedule.bat status
+scripts\windows_schedule.bat run
+scripts\windows_schedule.bat disable
+```
+
+- `enable 6`：每 6 小时采集一次全部任务（1–24 小时），只在你登录时运行。
+- `status`：查看计划任务状态。
+- `run`：立即执行一次，与计划任务执行的命令相同。
+- `disable`：删除计划任务，不删除任何数据。
+
+计划任务名为 `TechSignal-Collector`，执行的命令是 `.venv\Scripts\pythonw.exe -m techsignal.collector collect-all`，运行结果见上面的 `collect.log`。这个脚本同样**还没有在真实 Windows 上验收**。
+
+macOS 和 Linux 可以用 cron 执行同一条命令，例如：
+
+```
+0 */6 * * * /路径/.venv/bin/python -m techsignal.collector collect-all
 ```
 
 ### 已经验证过的真实来源
