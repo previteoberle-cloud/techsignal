@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>示例芯片新闻（离线固定数据）</title>
+<item><title>Tenstorrent 发布 Blackhole 新固件</title><link>https://news.example.com/a1</link><guid>a1</guid>
+<pubDate>Mon, 03 Nov 2026 08:00:00 GMT</pubDate><description><![CDATA[<p>新固件支持 <b>Llama 3.1 70B</b>。</p>]]></description></item>
+<item><title>某公司扩产 8 英寸碳化硅产线</title><link>https://news.example.com/a2</link><guid>a2</guid>
+<pubDate>Sun, 02 Nov 2026 08:00:00 GMT</pubDate><description>产线扩产计划公布。</description></item>
+</channel></rss>
