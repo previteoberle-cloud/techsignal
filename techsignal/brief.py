@@ -5,6 +5,7 @@ Every statement carries its kind and citations; the renderer prints citations in
 """
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 
 from .models import (
@@ -42,10 +43,32 @@ def iso(ts: int) -> str:
     return datetime.fromtimestamp(int(ts), tz=UTC).strftime("%Y-%m-%d %H:%M UTC")
 
 
+_MD_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+MAX_DISPLAY_CHARS = 160
+
+
+def _display(line: str) -> str:
+    """Brief display only (the ledger keeps the raw line): markdown links -> text, collapse
+    whitespace, cap the length."""
+    text = re.sub(r"\s+", " ", _MD_LINK.sub(r"\1", line)).strip()
+    return text if len(text) <= MAX_DISPLAY_CHARS else text[:MAX_DISPLAY_CHARS - 1] + "…"
+
+
+def _display_long(text: str) -> str:
+    return re.sub(r"\s+", " ", _MD_LINK.sub(r"\1", text)).strip()[:400]
+
+
+def _signal_first(lines: list[str], signals: list[str]) -> list[str]:
+    hit = [x for x in lines if any(x in s for s in signals)]
+    return hit + [x for x in lines if x not in hit]
+
+
 def _item(a: Assessment, ev: Evidence, event: ChangeEvent, th: Thesis, evidence: dict[str, Evidence]) -> BriefItem:
     e = [ev.evidence_id]
-    new_info = [Statement(kind=K.FACT, text=f"新增：{x}", evidence_ids=e) for x in ev.excerpt_added[:MAX_LINES_PER_SIDE]]
-    new_info += [Statement(kind=K.FACT, text=f"删除：{x}", evidence_ids=e) for x in ev.excerpt_removed[:MAX_LINES_PER_SIDE]]
+    added = _signal_first(ev.excerpt_added, a.matched_signals)[:MAX_LINES_PER_SIDE]
+    removed = _signal_first(ev.excerpt_removed, a.matched_signals)[:MAX_LINES_PER_SIDE]
+    new_info = [Statement(kind=K.FACT, text=f"新增：{_display(x)}", evidence_ids=e) for x in added]
+    new_info += [Statement(kind=K.FACT, text=f"删除：{_display(x)}", evidence_ids=e) for x in removed]
     hidden = max(0, len(ev.excerpt_added) - MAX_LINES_PER_SIDE) + max(0, len(ev.excerpt_removed) - MAX_LINES_PER_SIDE)
     if hidden:
         new_info.append(Statement(kind=K.FACT, text=f"另有 {hidden} 行变化未在速览中展开，见证据台账", evidence_ids=e))
@@ -56,6 +79,9 @@ def _item(a: Assessment, ev: Evidence, event: ChangeEvent, th: Thesis, evidence:
 
     ctx = [Statement(kind=K.CONTEXT, thesis_ids=[th.thesis_id],
                      text=f"{th.title}：{th.conclusion}（截至 {th.as_of}，负责人 {th.owner}）")]
+    ctx += [Statement(kind=K.CONTEXT, thesis_ids=[th.thesis_id],
+                      text=f"结论依据 {src.source_id}：{src.publisher}，{src.published_at}，「{_display(src.quote)}」（{src.url}）")
+            for src in th.sources]
     if a.assumption_id:
         stmt = next((x.statement for x in th.assumptions if x.assumption_id == a.assumption_id), "")
         ctx.append(Statement(kind=K.CONTEXT, thesis_ids=[th.thesis_id], text=f"相关假设 {a.assumption_id}：{stmt}"))
@@ -71,7 +97,7 @@ def _item(a: Assessment, ev: Evidence, event: ChangeEvent, th: Thesis, evidence:
         Statement(kind=K.CONTEXT, thesis_ids=[th.thesis_id],
                   text=f"结论状态保持「{th.status}」，系统不会因新信息自动修改历史结论"),
     ]
-    reasoning = [Statement(kind=K.INFERENCE, text=f"规则层：{r}", evidence_ids=e, basis=Basis.RULE)
+    reasoning = [Statement(kind=K.INFERENCE, text=f"规则层：{_display_long(r)}", evidence_ids=e, basis=Basis.RULE)
                  for r in a.rationale]
     if a.model_rationale:
         reasoning.append(Statement(kind=K.INFERENCE, text=f"模型层：{a.model_rationale}", evidence_ids=e,

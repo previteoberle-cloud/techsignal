@@ -123,6 +123,9 @@ class ChangeEvent(_Strict):
 
 class SourceProfile(_Strict):
     domain: str
+    # Optional URL path prefix, for hosts that serve many publishers (e.g. raw.githubusercontent.com
+    # serves every GitHub repository, but only /tenstorrent/ is that company's own publication).
+    path_prefix: str = ""
     name: str
     source_type: SourceType
     grade: EvidenceGrade
@@ -137,6 +140,17 @@ class Assumption(_Strict):
     weaken_patterns: list[str] = Field(default_factory=list)
 
 
+class ThesisSource(_Strict):
+    """A public source the thesis was built on (R2). Text is quoted, never paraphrased into facts."""
+    source_id: str
+    url: str
+    publisher: str
+    published_at: str            # when the source says it was published/committed
+    retrieved_via: str           # how it was retrieved, e.g. "git clone of public repo"
+    quote: str
+    note: str = ""
+
+
 class Thesis(_Strict):
     thesis_id: str
     title: str
@@ -148,6 +162,7 @@ class Thesis(_Strict):
     as_of: str
     owner: str
     fictional: bool
+    sources: list[ThesisSource] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

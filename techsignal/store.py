@@ -8,6 +8,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from pydantic import TypeAdapter, ValidationError
 
@@ -41,27 +42,34 @@ def load_theses(path: Path) -> list[Thesis]:
 
 
 class SourceRegistry:
-    """Maps a domain to a source profile. Unknown domains are grade D, never silently trusted."""
+    """Maps a URL to a source profile. Unknown sources are grade D, never silently trusted.
+
+    Lookup order: exact host or parent domain; among entries for that host, the longest matching
+    path_prefix wins, and an entry with a path_prefix only matches URLs under that prefix.
+    """
 
     def __init__(self, profiles: list[SourceProfile]):
-        self._by_domain = {p.domain.lower(): p for p in profiles}
+        self._by_domain: dict[str, list[SourceProfile]] = {}
+        for p in profiles:
+            self._by_domain.setdefault(p.domain.lower(), []).append(p)
 
     @classmethod
-    def load(cls, path: Path) -> SourceRegistry:
+    def load(cls, path: Path) -> "SourceRegistry":
         data = _read_json(path)
         items = data.get("sources") if isinstance(data, dict) else None
         if not isinstance(items, list):
             raise StoreError(f"{path} 缺少 'sources' 列表")
         return cls(TypeAdapter(list[SourceProfile]).validate_python(items))
 
-    def profile(self, domain: str) -> SourceProfile:
+    def profile(self, domain: str, url: str | None = None) -> SourceProfile:
         domain = (domain or "").lower()
-        # exact match, then parent domains (news.example.org -> example.org)
+        path = urlsplit(url).path if url else ""
         parts = domain.split(".")
         for i in range(len(parts) - 1):
-            p = self._by_domain.get(".".join(parts[i:]))
-            if p:
-                return p
+            candidates = self._by_domain.get(".".join(parts[i:]), [])
+            matching = [p for p in candidates if not p.path_prefix or path.startswith(p.path_prefix)]
+            if matching:
+                return max(matching, key=lambda p: len(p.path_prefix))
         return SourceProfile(domain=domain, name=f"未登记来源（{domain or '无域名'}）",
                              source_type=SourceType.UNKNOWN, grade=EvidenceGrade.D,
                              note="来源未在登记表中，按最低等级处理")

@@ -128,3 +128,27 @@ def test_library_ledger_untouched_when_validation_fails(tmp_path, theses, source
     with pytest.raises(CitationError):
         run_pipeline(sc["report"], theses, sources, ledger=EvidenceLedger(path))
     assert path.read_bytes() == before
+
+
+# --- R2: failures during the final os.replace phase (previously documented as non-atomic) ---
+
+@pytest.mark.parametrize("fail_on_call", [1, 2, 4], ids=["first-replace", "second-replace", "last-replace"])
+def test_replace_phase_failure_keeps_previous_outputs(tmp_path, monkeypatch, fail_on_call):
+    out = tmp_path / "out"
+    before = _good_run(out)
+    changes, replay = _scenario_input(tmp_path, "S02_weakens.json")  # different input, fresh-ledger mode
+    import techsignal.cli as cli
+    real_replace = cli.os.replace
+    calls = {"n": 0}
+
+    def flaky_replace(src, dst):
+        if str(dst).startswith(str(out)) and pathlib.Path(dst).parent == out:
+            calls["n"] += 1
+            if calls["n"] == fail_on_call:
+                raise OSError("injected failure while moving outputs into place")
+        return real_replace(src, dst)
+    monkeypatch.setattr(cli.os, "replace", flaky_replace)
+    assert main(_args(changes, out, replay=replay)) != 0
+    monkeypatch.undo()
+    assert _snapshot(out) == before
+    _no_leftovers(out)

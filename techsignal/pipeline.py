@@ -85,7 +85,7 @@ def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
                 reason_zh=f"仅含噪声或位置移动：噪声 {len(t.dropped_noise)} 行，移动 {len(t.dropped_moved)} 行"))
             continue
 
-        source = sources.profile(event.domain)
+        source = sources.profile(event.domain, event.url)
         fp = fingerprint(t)
         # Duplicate = same content about the same research subject. Matching first means identical
         # wording on two different companies' pages is assessed twice, not merged (R1.1).
