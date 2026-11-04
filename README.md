@@ -70,8 +70,8 @@ python -m techsignal.collector export <任务编号> --csv out.csv --md out.md
 | 来源 | 验证方式 | 结果 |
 |---|---|---|
 | `raw.githubusercontent.com` 上 tenstorrent/tt-metal 的 README（网页） | 云开发环境中实际采集，用真实浏览器操作，重启后再采集一次；GitHub Actions 上同样执行 | 两次采集，第二次没有重复；重启后数据仍在 |
-| GitHub 发布记录 Atom（tenstorrent/tt-metal） | 只在 GitHub Actions（`live-cdio` job）中采集两次。云开发环境的网络策略拒绝访问，结果为 403 | 以 CI 结果为准 |
-| arXiv cs.AR RSS | 同上，只在 GitHub Actions 中验证 | 以 CI 结果为准 |
+| GitHub 发布记录 Atom（tenstorrent/tt-metal） | 在 GitHub Actions 的 `live-cdio` job 中采集两次（run #16 通过）。云开发环境的网络策略拒绝访问，结果为 403，所以没有在那里验证 | 两次都成功；第二次没有重复条目 |
+| arXiv cs.AR RSS | 同上（run #16 通过） | 两次都成功；第二次没有重复条目 |
 | 经真实 changedetection.io 0.60.10 抓取网页 | 在线集成测试，使用本地测试页 | 首次记录、未变化时不重复、新增内容单独成条 |
 
 离线测试使用 `tests/fixtures/collector/` 中的虚构 RSS/Atom 数据，只用来验证逻辑，不当作真实采集结果。交接说明见 [docs/COLLECTOR_MVP_HANDOFF.md](docs/COLLECTOR_MVP_HANDOFF.md)。
