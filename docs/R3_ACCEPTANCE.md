@@ -84,6 +84,13 @@ TechSignal 现在可以对存在具体疑点的研判**主动补证**：
 | TC-02 | GitHub 提交元数据（api.github.com） | **403**：本容器的网络策略拒绝访问。如实记录为失败，不重试，也不绕过 | 无 |
 | TC-03 | GitHub 文件检索：沿被删除行中的官方链接 `./models/tt_transformers`，取**同一提交**下的 `models/tt_transformers/README.md` | 200。模型文档写「Llama 3.1 70B \| LoudBox / QuietBox / Galaxy」，没有写明 Blackhole（QuietBox 同时有 Wormhole 版和 Blackhole 版） | EV-d69099674e（A 级） |
 
+**GitHub Actions 开放网络中的同一次运行**（live-cdio job 126439414860，提交 785d165；轨迹摘要直接打印在 job 日志里）：
+
+- **TC-02 成功（200）**，取得官方提交说明「[skip ci] Update README.md - Add Featured Models list. (#25452) … Featured Models list to replace the full model list on the tt-metal repo landing README … Moved or…」，新证据 EV-2cd6b3fd71。
+- 确定性提示：「提交说明含文档结构调整用语（featured, moved, list），未见撤回/弃用用语（规则提示，非结论）」。
+- TC-01、TC-03 与本会话结果一致。
+- 最终结论仍为 `related_evidence_no_direction`，**保持「尚未核实」**：提交说明支持「这是文档重排」的解释，但没有说明 Blackhole 70B 是否仍受支持。
+
 - **结论：** `related_evidence_no_direction`。两条新证据都没有命中任何判定规则，无法区分「文档重排」和「撤回支持」，**保持尚未核实**。
 - 原有研判（证据不足）、历史判断（批次 1 的削弱）和研究结论（active）都没有改变。
 - 停止原因为 `plan_completed`：3 次调用，正好用完单项上限。
@@ -106,7 +113,7 @@ TechSignal 现在可以对存在具体疑点的研判**主动补证**：
 
 **B. 实际调用了哪些外部工具，获得了哪些新证据？**
 
-见第五节：本会话真实执行了 3 次调用，其中 2 次成功、1 次被网络策略拒绝（403），得到 2 条新的官方证据 EV-edded20f04 和 EV-d69099674e。GitHub Actions 的 live-cdio job 会在开放网络里重跑同一案例，并把输出（含轨迹）作为 artifact 上传；那边的提交元数据调用可能成功，具体以 CI 产物为准。
+见第五节：本会话真实执行了 3 次调用，其中 2 次成功、1 次被网络策略拒绝（403），得到 2 条新的官方证据 EV-edded20f04 和 EV-d69099674e。在 GitHub Actions 的开放网络中，TC-02 也成功了，多得到一条官方提交说明（EV-2cd6b3fd71），共 3 条新证据。
 
 **C. 补证真正改变了判断，还是只明确了剩余疑问？**
 
@@ -144,7 +151,7 @@ TechSignal 现在可以对存在具体疑点的研判**主动补证**：
 | `python -m pytest`（离线） | **185 passed, 4 skipped**；R1/R1.1 的测试未改。R2 测试有两处为配合 P0 和 R3 做了调整：回放改为带运行记录、按研判内容比较，以及按证据来源过滤；其余未改 |
 | 在线测试（本会话） | **4 passed**（真实 changedetection.io 与真实 GitHub 来源） |
 | 新增测试 | `test_r3_provenance.py` 8 个，`test_r3_verification.py` 40 个，在线 1 个 |
-| GitHub Actions | 见 PR #1 最新提交的检查结果；live-cdio job 已改为运行跨批次补证案例，并上传输出 |
+| GitHub Actions | 提交 8ae984c 与 785d165：push 和 PR 两次运行中，test (3.11)、test (3.13)、live-cdio 全部成功；live-cdio 中 4 个在线测试通过 |
 | 上游核心 | `git diff origin/master -- changedetectionio/` 为 0 行 |
 
 ## 八、未完成与风险

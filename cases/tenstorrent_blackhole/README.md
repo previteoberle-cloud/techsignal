@@ -81,6 +81,8 @@ Tenstorrent 新一代 AI 加速芯片 **Blackhole** 的大模型推理软件支�
 | TC-02 | 读取提交 `62f3cd0` 的官方提交说明（api.github.com） | 本会话容器的网络策略拒绝访问（403），如实记录为失败 |
 | TC-03 | 沿被删除行中的官方链接 `./models/tt_transformers`，读取**同一提交**下的模型文档 | 文档写「Llama 3.1 70B \| LoudBox / QuietBox / Galaxy」，没有写明 Blackhole（新证据 EV-d69099674e） |
 
+**CI 开放网络中的同一次运行：** TC-02 成功，取得官方提交说明「Update README.md - Add Featured Models list … to replace the full model list on the tt-metal repo landing README」（EV-2cd6b3fd71）。规则提示为「文档结构调整用语，未见撤回用语」，但这仍不能说明 Blackhole 70B 是否受支持。
+
 **结论：** 两条新证据都没有命中判定规则，无法区分「文档重排」和「撤回支持」，系统保持「尚未核实」，没有改变任何判断。
 
 **人工解读（推测，非系统结论）：** QuietBox 同时有 Wormhole 版和 Blackhole 版，所以模型文档里的「QuietBox」不能直接当作 Blackhole 的证据。要回答这个问题，需要读取提交说明（在 CI 的开放网络中可以执行），或查阅发布说明。
