@@ -8,11 +8,12 @@
 
 | 提交 | 内容 | GitHub CI |
 |---|---|---|
+| `a890b20` | **最新稳定提交**：在 `5de01a8` 的基础上修复了 CI 中的一个测试问题 | run #26（push）和 #27（PR）：6 个 job 全部通过 |
 | `5de01a8` | **最新代码提交**：批量采集、计划任务脚本、默认只监听本机、Windows 脚本加固 | run #22：1 个测试因缺少 Streamlit 失败（测试问题），已在其后的提交修复，见第 9 节 |
 | `2735a93` | 数据一致性修复（第 3 节） | run #20：6 个 job 全部通过 |
 | `0e125dc` | 采集器 MVP 验收版本 | run #18 / #19：全部通过 |
 
-本文档和 README 所在的提交位于 `5de01a8` 之后，只修改文档。接手时以 PR #1 的 head 为准。
+在 `a890b20` 之后的提交只修改文档。接手时以 PR #1 的 head 为准。
 
 ## 2. 采集器已实现的能力
 
@@ -145,4 +146,4 @@ python -m techsignal.workbench
 
 - 本地离线测试：429 passed, 13 skipped。跳过的是需要网络、changedetection.io 或授权模型的测试，它们在 CI 中运行。
 - 本地在线测试：真实网页采集、`collect-all`、经真实 changedetection.io 抓取网页，均通过。
-- GitHub CI run #22（提交 `5de01a8`）：**失败**，只有 1 个测试，原因是测试本身的问题。新增的「默认只监听本机」测试导入了 Streamlit，而 CI 的 `test` job 不安装界面依赖（本地装了，所以没发现）。已改为没有 Streamlit 时跳过；这个测试在 `ui` job 和本地仍会运行。采集器代码没有改动。修复后的 CI 结果以 PR #1 页面为准。
+- GitHub CI run #22（提交 `5de01a8`）：**失败**，只有 1 个测试，原因是测试本身的问题。新增的「默认只监听本机」测试导入了 Streamlit，而 CI 的 `test` job 不安装界面依赖（本地装了，所以没发现）。已改为没有 Streamlit 时跳过；这个测试在 `ui` job 和本地仍会运行。采集器代码没有改动。修复后（`a890b20`），run #26 和 #27 的 6 个 job 全部通过：test 3.11/3.13、ui、upstream-contract、live-cdio（包括真实的 GitHub Atom、arXiv RSS 和 raw GitHub 网页，各采集两次），以及 r6-browser（包括采集器的浏览器验收，工作台已默认只监听本机）。
