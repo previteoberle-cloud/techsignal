@@ -104,8 +104,10 @@ def _feed(store: C.CollectorStore, tasks: list[C.Task]) -> None:
                 try:
                     r = store.collect(t.task_id, cdio_client=cdio)
                     msgs.append((t, r))
-                except C.CollectorError as e:
+                except C.ProjectError as e:      # includes "another collection is running" (lock)
                     st.error(f"{t.name}：{e}")
+                except OSError as e:
+                    st.error(f"{t.name}：保存失败（{e}），已有记录未改动，可以稍后重试")
         ss["_c_last"] = [(t.name, r.new_items, r.duplicates, r.failed_sources) for t, r in msgs]
     for name, n_new, n_dup, n_fail in ss.get("_c_last", []):
         text = f"{name}：新增 {n_new} 条，跳过重复 {n_dup} 条" + (f"，{n_fail} 个来源失败（见「采集状态」）" if n_fail else "")

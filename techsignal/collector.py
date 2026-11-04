@@ -608,7 +608,53 @@ def to_markdown(items: list[Item], title: str = "TechSignal 信息采集导出")
 
 
 # ---------------------------------------------------------------------------
-# Command line: python -m techsignal.collector list | collect <task id> | export <task id> --csv/--md
+# Batch collection (for Windows Task Scheduler / cron) with a short run log
+# ---------------------------------------------------------------------------
+
+LOG_MAX_BYTES = 1_000_000
+
+
+def log_line(store: CollectorStore, text: str) -> None:
+    """Append one line to <root>/logs/collect.log (rotated to collect.log.1 at ~1 MB)."""
+    f = store.root / "logs" / "collect.log"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    if f.exists() and f.stat().st_size > LOG_MAX_BYTES:
+        os.replace(f, f.with_suffix(".log.1"))
+    with open(f, "a", encoding="utf-8") as fh:
+        fh.write(f"{now_iso()} {text}\n")
+
+
+def collect_all(store: CollectorStore, fetch=None) -> dict:
+    """Collect every task once. A task that is being collected elsewhere is skipped, not waited for;
+    a failing source or task never stops the others. Returns a summary and writes the run log."""
+    summary = {"tasks": 0, "new_items": 0, "failed_sources": 0, "skipped_tasks": 0, "failed_tasks": 0}
+    tasks = store.tasks()
+    log_line(store, f"开始批量采集：{len(tasks)} 个任务")
+    for t in tasks:
+        summary["tasks"] += 1
+        try:
+            r = store.collect(t.task_id, fetch=fetch)
+        except ProjectError as e:          # includes the per-task lock: another run is collecting it
+            busy = "占用" in str(e)
+            summary["skipped_tasks" if busy else "failed_tasks"] += 1
+            log_line(store, f"{'跳过' if busy else '失败'}｜{t.name}｜{e}")
+            continue
+        except OSError as e:               # e.g. disk full: history is intact (see collect()), say so
+            summary["failed_tasks"] += 1
+            log_line(store, f"失败｜{t.name}｜保存失败：{e}（已有记录未改动）")
+            continue
+        summary["new_items"] += r.new_items
+        summary["failed_sources"] += r.failed_sources
+        errs = "；".join(f"{x.get('error')}" for x in r.per_source.values() if not x.get("ok"))
+        log_line(store, f"完成｜{t.name}｜新增 {r.new_items}，重复 {r.duplicates}，失败来源 {r.failed_sources}"
+                        + (f"｜{errs}" if errs else ""))
+    log_line(store, "结束：新增 {new_items} 条，失败来源 {failed_sources} 个，跳过任务 {skipped_tasks} 个，"
+                    "失败任务 {failed_tasks} 个".format(**summary))
+    return summary
+
+
+# ---------------------------------------------------------------------------
+# Command line: python -m techsignal.collector list | collect <task id> | collect-all | export <task id>
 # ---------------------------------------------------------------------------
 
 def main(argv=None) -> int:
@@ -619,6 +665,7 @@ def main(argv=None) -> int:
     sub.add_parser("list")
     c = sub.add_parser("collect")
     c.add_argument("task_id")
+    sub.add_parser("collect-all", help="采集全部任务一次，结果写入 <数据目录>/logs/collect.log（供计划任务调用）")
     e = sub.add_parser("export")
     e.add_argument("task_id")
     e.add_argument("--csv")
@@ -629,6 +676,12 @@ def main(argv=None) -> int:
         if a.cmd == "list":
             for t in store.tasks():
                 print(t.task_id, t.name, f"{len(t.sources)} 个来源", f"{len(store.items(t.task_id))} 条")
+        elif a.cmd == "collect-all":
+            sm = collect_all(store)
+            print("批量采集：{tasks} 个任务，新增 {new_items} 条，失败来源 {failed_sources} 个，跳过 {skipped_tasks} 个，"
+                  "失败任务 {failed_tasks} 个".format(**sm))
+            print(f"日志：{store.root / 'logs' / 'collect.log'}")
+            return 0 if not (sm["failed_sources"] or sm["failed_tasks"] or sm["skipped_tasks"]) else 1
         elif a.cmd == "collect":
             r = store.collect(a.task_id)
             print(f"新增 {r.new_items} 条，重复 {r.duplicates} 条，失败来源 {r.failed_sources} 个")

@@ -279,3 +279,68 @@ def test_a_long_running_collection_is_not_taken_over(store, site):
     with pytest.raises(C.ProjectError) as e:
         store.collect(t.task_id)
     assert "占用" in str(e.value) and store.items(t.task_id) == []
+
+
+# ---------------------------------------------------------------- batch collection (final round, P1) --
+
+def test_collect_all_runs_every_task_logs_and_survives_failures(store, site):
+    site.put("/rss", (FIX / "rss_v1.xml").read_bytes())
+    site.put("/broken", b"", "text/plain", status=500)
+    a = store.create_task("任务甲", "Tenstorrent", "", f"{site.base}/rss 订阅")
+    b = store.create_task("任务乙", "", "", f"{site.base}/broken 坏来源")
+    s1 = C.collect_all(store)
+    assert (s1["tasks"], s1["new_items"], s1["failed_sources"]) == (2, 2, 1)
+    s2 = C.collect_all(store)                                     # second scheduled run: nothing new
+    assert s2["new_items"] == 0 and len(store.items(a.task_id)) == 2 and store.items(b.task_id) == []
+    log = (store.root / "logs" / "collect.log").read_text(encoding="utf-8")
+    assert log.count("开始批量采集") == 2 and "完成｜任务甲｜新增 2" in log and "HTTP 500" in log
+
+
+def test_collect_all_skips_a_task_being_collected(store, site):
+    site.put("/rss", (FIX / "rss_v1.xml").read_bytes())
+    t = store.create_task("任务甲", "", "", f"{site.base}/rss 订阅")
+    (store._dir(t.task_id) / ".collect-lock").mkdir(parents=True)          # a manual run in progress
+    s = C.collect_all(store)
+    assert s["skipped_tasks"] == 1 and store.items(t.task_id) == []
+    assert "跳过｜任务甲" in (store.root / "logs" / "collect.log").read_text(encoding="utf-8")
+
+
+def test_collect_all_cli_exit_codes(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv(C.ROOT_ENV, str(tmp_path / "c"))
+    assert C.main(["collect-all"]) == 0                                   # no tasks: nothing to do, success
+    assert "0 个任务" in capsys.readouterr().out
+
+
+def test_concurrent_collections_of_one_task_never_corrupt_history(store, site):
+    import threading
+    site.put("/rss", (FIX / "rss_v2.xml").read_bytes())
+    t = store.create_task("并发", "", "", f"{site.base}/rss 订阅")
+    errors = []
+
+    def run():
+        try:
+            store.collect(t.task_id)
+        except C.ProjectError as e:
+            errors.append(e)
+    th = [threading.Thread(target=run) for _ in range(4)]
+    for x in th:
+        x.start()
+    for x in th:
+        x.join()
+    items = store.items(t.task_id)
+    assert len(items) == 3 and len({i.item_id for i in items}) == 3
+
+
+def test_workbench_listens_on_localhost_by_default(monkeypatch):
+    import sys
+    from techsignal.workbench import __main__ as wb
+    seen = {}
+    monkeypatch.setattr(sys, "argv", ["x", "--server.port", "8600"])
+    import streamlit.web.cli as stcli
+    monkeypatch.setattr(stcli, "main", lambda: seen.setdefault("argv", list(sys.argv)) and 0)
+    wb.main()
+    assert seen["argv"][seen["argv"].index("--server.address") + 1] == "127.0.0.1"
+    monkeypatch.setattr(sys, "argv", ["x", "--server.address", "0.0.0.0"])
+    seen.clear()
+    wb.main()
+    assert seen["argv"].count("--server.address") == 1                    # an explicit choice is kept
