@@ -15,6 +15,7 @@ from techsignal.workbench.replay import fetch_live, replay_case
 
 PAGES = ["总览", "管理层速览", "研究判断", "变化时间线", "补证过程", "证据详情"]
 MODES = ["历史实测演示", "离线回放", "在线连接"]
+WORKSPACES = ["示例案例", "我的研究项目"]
 
 st.set_page_config(page_title="TechSignal 研究工作台", layout="wide", initial_sidebar_state="expanded")
 
@@ -62,10 +63,19 @@ def cases_root() -> Path:
 # Sidebar
 # ---------------------------------------------------------------------------
 
-cases, problems = vm.discover_cases(cases_root())
 with st.sidebar:
     st.markdown("### TechSignal 研究工作台")
     st.caption("跟踪硬科技公司公开信息的变化，判断它对既有研究结论的影响。")
+    workspace = st.radio("工作区", WORKSPACES, key="workspace", horizontal=True,
+                         help="示例案例：已保存的真实公开案例（只读）。我的研究项目：你自己新建的研究，单独保存。")
+
+if workspace == "我的研究项目":
+    from techsignal.workbench.projects_ui import render as render_projects
+    render_projects()
+    st.stop()
+
+cases, problems = vm.discover_cases(cases_root())
+with st.sidebar:
     if not cases:
         st.error("没有找到可用的研究案例。")
         for p in problems:
