@@ -2,7 +2,7 @@
 
 TechSignal 读取 [changedetection.io](https://github.com/dgtlmoon/changedetection.io) 输出的网页变化数据，判断这些变化对**既有研究判断**的影响，并生成带证据编号、可校验的中文管理层速览。
 
-> **状态说明（R2）：** 规则层、证据台账、简报、引用校验、changedetection.io API Client 和跨批次历史都已真实运行。已对真实运行的 changedetection.io 实例和真实公开来源（Tenstorrent 官方 GitHub 仓库的提交历史）完成在线验证，本会话和 GitHub Actions 两处都已验证。模型层**尚未接入任何真实大模型**：只有 Mock 回放，以及对本地协议桩的 HTTP 验证。虚构场景只用来验证逻辑。详见 [docs/R2_ACCEPTANCE.md](docs/R2_ACCEPTANCE.md)。
+> **状态说明（R3）：** 已真实运行的部分：规则层、证据台账、简报与引用校验、changedetection.io API Client、跨批次历史、**有界补证**（确定性策略触发，在白名单内真实调用 changedetection.io 快照、GitHub 文件和 GitHub 提交元数据）。已对真实运行的 changedetection.io 实例和真实公开来源（Tenstorrent 官方 GitHub 仓库）在线验证。**还没有任何真实大模型参与**：补证决策和研判全部是确定性规则；模型层只有 Mock 回放和本地协议桩测试。也**不是持续自动监控**：目前按需运行，真实案例是对历史版本的回放观测。详见 [docs/R3_ACCEPTANCE.md](docs/R3_ACCEPTANCE.md)。
 
 ## 与 changedetection.io 的分工
 
@@ -102,6 +102,22 @@ python -m techsignal.live --python /path/to/python --case cases/tenstorrent_blac
 
 真实公开案例：[cases/tenstorrent_blackhole/](cases/tenstorrent_blackhole/README.md)。
 
+## 有界补证（R3）
+
+```bash
+python -m techsignal run --cdio-url http://localhost:5000 --from 1790812800 --theses ... --sources ... --out out/ --track-history --verify --verify-policy my/verify_policy.json
+```
+
+- **何时触发：** 只在研判存在具体疑点时补证——信号只出现在删除或否定语境中、有冲突证据、低等级来源带方向、跨批次无法定向。裁定明确的研判和无关变化不触发。
+- **用什么工具：** changedetection.io 快照检索（只限本次 `--cdio-url` 实例）、GitHub 指定版本的文件检索、GitHub 提交元数据。规划由确定性代码完成：同页最新快照 → 引起变化的提交 → 疑点内容中的官方相对链接。
+- **控制：** 白名单（主机、端口、路径前缀完全匹配，每跳重定向都重新检查）；每项最多 3 次调用，另有每次运行的总上限；超时、重试、调用去重和停止条件；工具输出只当作数据，疑似提示注入的行会被排除。
+- **结果：** 新证据独立编号（`obtained_via=verification_tool`），交给同一套规则复评；没有命中规则就保持「尚未核实」。每次调用都写入 `verification_trace.json`，简报中有「补证记录」一节。
+- **结论只读：** 研究判断永远不会被改写；补证失败时，已有输出、台账和历史保持不变。
+
+## 来源声明
+
+简报开头的声明都根据运行元数据生成（`provenance.py`），包括：在线拉取或离线文件；离线回放必须用 `--input-record` 提供在线运行记录并核对 sha256；数据是虚构还是公开资料；模型层是未配置、Mock 回放还是真实模型；是否执行了补证。
+
 ## changedetection.io 数据契约
 
 适配器解析的是 `GET /api/v1/changes?format=json` 的返回。契约依据：
@@ -134,7 +150,7 @@ Markdown 层还会检查：所有 `[EV-…]`、`[TH-…]` 都能追溯到证据�
 
 ## 测试
 
-离线测试共 137 个，另有 3 个需显式开启的在线测试（`tests/integration/`，需要真实的 changedetection.io）。离线测试包括 23 个虚构场景（S21–S23 和 `test_r11_*.py` 为 R1.1 反例回归），以及 R2 新增的 API Client、真实案例回放、模型协议、跨批次测试。场景覆盖：有效变化、支持、削弱、两类无关、两类噪声、两类重复、来源冲突、低等级证据、无信号、Mock 判定、模型错误引用、模型缺失、否定语境、无净差异、截断加报错，以及三类异常输入。各场景的结果见 [docs/R1_ACCEPTANCE.md](docs/R1_ACCEPTANCE.md)。
+离线测试共 185 个，另有 4 个需显式开启的在线测试（`tests/integration/`，需要真实的 changedetection.io 和 GitHub 访问）。离线测试包括 23 个虚构场景（S21–S23 和 `test_r11_*.py` 为 R1.1 反例回归），以及 R2 新增的 API Client、真实案例回放、模型协议、跨批次测试。场景覆盖：有效变化、支持、削弱、两类无关、两类噪声、两类重复、来源冲突、低等级证据、无信号、Mock 判定、模型错误引用、模型缺失、否定语境、无净差异、截断加报错，以及三类异常输入。各场景的结果见 [docs/R1_ACCEPTANCE.md](docs/R1_ACCEPTANCE.md)。
 
 评测指标只说明代码行为与人工标注的预期一致。场景和预期都由开发者编写，**不代表真实世界的准确率**。
 
@@ -146,7 +162,9 @@ Markdown 层还会检查：所有 `[EV-…]`、`[TH-…]` 都能追溯到证据�
 - 去重只识别规范化后完全相同的内容，不识别同义改写。
 - 「研究对象」目前以 thesis 为粒度：若一条 thesis 跟踪多家公司，这些公司之间的同文内容仍会被视为重复。实体级标准 ID 留待后续。
 - 输出提交是逐文件原子的，四个文件作为一组并非原子：进程恰好在两次 `os.replace` 之间被杀时可能新旧混合。已按「台账先、brief.md 最后」排序，降低影响。
-- 没有补证工具调用、没有在线集成、没有长期记忆或结论版本管理。
+- 补证决策和研判没有使用大模型；检索只能做词语和正则匹配，无法理解表格以外的语义。
+- 不是持续自动监控：没有定时任务和通知；研究判断、规则和白名单都要手写 JSON。
+- 没有结论版本管理；研究判断只读，修改要由人来做。
 
 ## 许可与署名
 

@@ -71,6 +71,20 @@ Tenstorrent 新一代 AI 加速芯片 **Blackhole** 的大模型推理软件支�
 
 输出：[`output_cross_batch/`](output_cross_batch/)。`batch1/` 和 `batch2/` 分别是两个批次处理后的状态快照，`state/` 是累积状态，`observation_record.json` 记录三个版本的提交号和抓取时间。
 
+## 有界补证（R3，真实执行）
+
+批次 2 出现「70B 条目只在删除侧」的疑点后，确定性策略触发了补证，在白名单内真实执行了 3 次工具调用，完整轨迹见 [`output_cross_batch/batch2/verification_trace.json`](output_cross_batch/batch2/verification_trace.json)：
+
+| 调用 | 做了什么 | 结果 |
+|---|---|---|
+| TC-01 | 在 changedetection.io 保存的新版 README 快照中检索 70B 相关内容 | 只剩「DeepSeek R1 Distill Llama 3.3 70B (TP=8)」「Llama 3.1 70B (TP=32)」两个标题，没有 Blackhole 70B 条目（新证据 EV-edded20f04） |
+| TC-02 | 读取提交 `62f3cd0` 的官方提交说明（api.github.com） | 本会话容器的网络策略拒绝访问（403），如实记录为失败 |
+| TC-03 | 沿被删除行中的官方链接 `./models/tt_transformers`，读取**同一提交**下的模型文档 | 文档写「Llama 3.1 70B \| LoudBox / QuietBox / Galaxy」，没有写明 Blackhole（新证据 EV-d69099674e） |
+
+**结论：** 两条新证据都没有命中判定规则，无法区分「文档重排」和「撤回支持」，系统保持「尚未核实」，没有改变任何判断。
+
+**人工解读（推测，非系统结论）：** QuietBox 同时有 Wormhole 版和 Blackhole 版，所以模型文档里的「QuietBox」不能直接当作 Blackhole 的证据。要回答这个问题，需要读取提交说明（在 CI 的开放网络中可以执行），或查阅发布说明。
+
 ## 复现
 
 只做离线回放，不需要网络，也不需要 changedetection.io：

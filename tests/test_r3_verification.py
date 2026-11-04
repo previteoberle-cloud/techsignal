@@ -271,7 +271,8 @@ def test_tool_output_is_data_not_instructions(theses, origin):
 
 
 def test_policy_limits_are_bounded():
-    with pytest.raises(Exception):
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
         VerifyPolicy(allow=[], max_calls_per_item=6)
     assert VerifyPolicy(allow=[]).max_calls_per_item == 3
 
