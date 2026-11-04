@@ -89,7 +89,7 @@ cd techsignal && pip install -e ".[ui]" && python -m techsignal.workbench
 | 在线集成测试（4 个） | 本会话重新运行：**4 passed**（真实 changedetection.io 与真实 GitHub 来源） |
 | 真实浏览器验收 | 本会话用 Playwright 驱动 Chromium（1440×900，像素比 2）打开 `python -m techsignal.workbench` 启动的服务，脚本见 `docs/screenshots/browser_check.js`。首屏、跨批次总览、管理层速览、变化时间线、补证过程、研究判断、证据详情均**没有横向溢出**；完整轨迹开关显示请求地址；点击 EV-edded20f04 跳转到对应详情；下载得到 `techsignal_tenstorrent-blackhole-70b-cross-batch_batch2.md`；离线回放显示「各批次判断与已保存的实测结果一致」；**页面脚本错误：无** |
 | 截图 | `docs/screenshots/r4_*.png`，共 7 张，均为真实截取 |
-| GitHub CI | 新增 `ui` job（安装 `.[test,ui]`、运行 UI 测试、真实启动服务并检查健康接口）；结果见 PR |
+| GitHub CI | 新增 `ui` job（安装 `.[test,ui]`、运行 UI 测试、真实启动服务并检查健康接口）；全部 job 成功，见第七节 |
 
 ## 六、回答 Owner 的问题
 
@@ -139,6 +139,8 @@ cd techsignal && pip install -e ".[ui]" && python -m techsignal.workbench
 - **多用户和权限管理**；
 - 在当前云容器内访问公司官网、新闻稿等来源（网络策略限制）。
 
-## 七、补充记录（提交后填写）
+## 七、补充记录：GitHub CI（提交 cd78e5c）
 
-见本文件之后的追加内容或 PR 描述。
+- `TechSignal (independent module)` 的 push 运行（41798671346）和 PR 运行（41798677579）中，`test (3.11)`、`test (3.13)`、`ui`、`live-cdio` **全部成功**。
+- `ui` job 日志：`31 passed`；服务真实启动后，健康检查和首页 `<title>` 检查均通过。
+- PR #1 的描述已按 R1–R4 的实际能力更新。
