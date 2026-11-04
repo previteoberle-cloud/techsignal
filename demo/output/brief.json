@@ -133,7 +133,7 @@
             "EV-e67441039b"
           ],
           "kind": "fact",
-          "text": "澜芯光电官网（虚构）（公司官方）https://www.lanxin-photonics.example/products；观测于 2026-10-15 09:30 UTC，对比基线 2026-09-30 08:00 UTC；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000907/difference/1790755200/1792056600",
+          "text": "澜芯光电官网（虚构）（公司官方）https://www.lanxin-photonics.example/products；changedetection.io 抓取于 2026-10-15 09:30 UTC，对比其上一次抓取 2026-09-30 08:00 UTC（抓取时间不等于发布时间）；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000907/difference/1790755200/1792056600",
           "thesis_ids": []
         }
       ],
@@ -241,7 +241,7 @@
             "EV-ba43e27873"
           ],
           "kind": "fact",
-          "text": "科技日报网（虚构媒体）（媒体）https://technews.example/telecom；观测于 2026-10-20 03:00 UTC，对比基线 2026-09-30 08:00 UTC；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000906/difference/1790755200/1792465200",
+          "text": "科技日报网（虚构媒体）（媒体）https://technews.example/telecom；changedetection.io 抓取于 2026-10-20 03:00 UTC，对比其上一次抓取 2026-09-30 08:00 UTC（抓取时间不等于发布时间）；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000906/difference/1790755200/1792465200",
           "thesis_ids": []
         }
       ],
@@ -369,7 +369,7 @@
             "EV-8a29458440"
           ],
           "kind": "fact",
-          "text": "星衡半导体官网（虚构）（公司官方）https://www.xingheng-semi.example/roadmap；观测于 2026-10-15 09:30 UTC，对比基线 2026-09-30 08:00 UTC；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000903/difference/1790755200/1792056600",
+          "text": "星衡半导体官网（虚构）（公司官方）https://www.xingheng-semi.example/roadmap；changedetection.io 抓取于 2026-10-15 09:30 UTC，对比其上一次抓取 2026-09-30 08:00 UTC（抓取时间不等于发布时间）；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000903/difference/1790755200/1792056600",
           "thesis_ids": []
         }
       ],
@@ -497,7 +497,7 @@
             "EV-59e766edf9"
           ],
           "kind": "fact",
-          "text": "科技日报网（虚构媒体）（媒体）https://technews.example/semi；观测于 2026-10-20 03:00 UTC，对比基线 2026-09-30 08:00 UTC；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000904/difference/1790755200/1792465200",
+          "text": "科技日报网（虚构媒体）（媒体）https://technews.example/semi；changedetection.io 抓取于 2026-10-20 03:00 UTC，对比其上一次抓取 2026-09-30 08:00 UTC（抓取时间不等于发布时间）；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000904/difference/1790755200/1792465200",
           "thesis_ids": []
         }
       ],
@@ -614,7 +614,7 @@
             "EV-b009513d97"
           ],
           "kind": "fact",
-          "text": "芯片论坛（虚构）（论坛/社区）https://chipforum.example/t/88；观测于 2026-10-20 03:00 UTC，对比基线 2026-09-30 08:00 UTC；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000905/difference/1790755200/1792465200",
+          "text": "芯片论坛（虚构）（论坛/社区）https://chipforum.example/t/88；changedetection.io 抓取于 2026-10-20 03:00 UTC，对比其上一次抓取 2026-09-30 08:00 UTC（抓取时间不等于发布时间）；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000905/difference/1790755200/1792465200",
           "thesis_ids": []
         }
       ],
@@ -722,7 +722,7 @@
             "EV-5171402f06"
           ],
           "kind": "fact",
-          "text": "星衡半导体官网（虚构）（公司官方）https://ir.xingheng-semi.example/news；观测于 2026-10-15 09:30 UTC，对比基线 2026-09-30 08:00 UTC；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000901/difference/1790755200/1792056600",
+          "text": "星衡半导体官网（虚构）（公司官方）https://ir.xingheng-semi.example/news；changedetection.io 抓取于 2026-10-15 09:30 UTC，对比其上一次抓取 2026-09-30 08:00 UTC（抓取时间不等于发布时间）；追溯：changedetection.io /api/v1/watch/00000000-0000-4000-8000-000000000901/difference/1790755200/1792056600",
           "thesis_ids": []
         }
       ],

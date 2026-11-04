@@ -1,0 +1,20 @@
+{
+  "_notice": "真实来源登记。raw.githubusercontent.com 承载所有 GitHub 仓库，只有 /tenstorrent/ 路径视为该公司官方发布。",
+  "sources": [
+    {
+      "domain": "raw.githubusercontent.com",
+      "path_prefix": "/tenstorrent/",
+      "name": "Tenstorrent 官方 GitHub 仓库（raw）",
+      "source_type": "official",
+      "grade": "A",
+      "note": "公司自己维护的公开仓库"
+    },
+    {
+      "domain": "github.com",
+      "path_prefix": "/tenstorrent/",
+      "name": "Tenstorrent 官方 GitHub 仓库",
+      "source_type": "official",
+      "grade": "A"
+    }
+  ]
+}

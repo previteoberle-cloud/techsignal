@@ -24,8 +24,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 
 class CdioError(RuntimeError):
@@ -76,7 +76,7 @@ def _urllib_transport(method: str, url: str, headers: dict, body: bytes | None, 
             return HTTPResponse(resp.status, resp.read())
     except urllib.error.HTTPError as e:
         return HTTPResponse(e.code, e.read() or b"")
-    except (TimeoutError, socket.timeout) as e:
+    except TimeoutError as e:
         raise CdioTimeoutError(f"请求超时（{timeout}s）：{method} {url}") from e
     except urllib.error.URLError as e:
         if isinstance(e.reason, (TimeoutError, socket.timeout)):
@@ -104,7 +104,7 @@ class ChangeDetectionClient:
         self.requests_made = 0
 
     @classmethod
-    def from_env(cls, **kw) -> "ChangeDetectionClient":
+    def from_env(cls, **kw) -> ChangeDetectionClient:
         return cls(os.getenv("TECHSIGNAL_CDIO_URL", ""), api_key=os.getenv("TECHSIGNAL_CDIO_API_KEY") or None,
                    timeout=float(os.getenv("TECHSIGNAL_CDIO_TIMEOUT", "30")), **kw)
 

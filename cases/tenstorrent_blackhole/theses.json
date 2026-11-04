@@ -1,0 +1,63 @@
+{
+  "_notice": "真实公开资料：依据 Tenstorrent 官方公开 GitHub 仓库 tt-metal 的 README（按提交固定）。研究判断由 TechSignal 演示整理，非投资建议。",
+  "theses": [
+    {
+      "thesis_id": "TH-TT-001",
+      "title": "Tenstorrent Blackhole 大模型推理软件成熟度",
+      "conclusion": "截至 2025-07-11，Tenstorrent 官方 tt-metal 模型表中，Blackhole 平台仅有 Llama 3.1 8B（p100/p150）的数据，且均标注为初步（* Blackhole software optimization is under active development），没有 70B 级模型记录；据此判断 Blackhole 的大模型推理软件支持仍处早期，70B 级模型的官方部署依托 Wormhole 平台（QuietBox / Galaxy）。",
+      "entities": [
+        "Tenstorrent",
+        "tt-metal",
+        "TT-Metalium"
+      ],
+      "topic_keywords": [
+        "Blackhole",
+        "70B",
+        "p150",
+        "p100",
+        "QuietBox",
+        "Llama"
+      ],
+      "assumptions": [
+        {
+          "assumption_id": "BH1",
+          "statement": "Blackhole 平台上尚无 70B 级大模型的官方性能记录",
+          "support_patterns": [],
+          "weaken_patterns": [
+            "70B[^|]*\\|[^|]*\\|[^|]*Blackhole"
+          ]
+        },
+        {
+          "assumption_id": "BH2",
+          "statement": "Blackhole 上已公布的性能数据均为初步（以 * 标注）",
+          "support_patterns": [],
+          "weaken_patterns": []
+        }
+      ],
+      "status": "active",
+      "as_of": "2025-07-11",
+      "owner": "TechSignal 演示（依据公开资料整理，AI 辅助）",
+      "fictional": false,
+      "sources": [
+        {
+          "source_id": "SRC-TT-1",
+          "url": "https://github.com/tenstorrent/tt-metal/blob/4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1/README.md",
+          "publisher": "Tenstorrent（tt-metal 官方仓库）",
+          "published_at": "2025-07-11T16:33:05+00:00（提交 4cd196f3ce）",
+          "retrieved_via": "git clone https://github.com/tenstorrent/tt-metal（公开仓库）",
+          "quote": "| [Llama 3.1 8B](./models/tt_transformers)                         | 32     | [p150](https://tenstorrent.com/hardware/blackhole)        | 69*       | 29.1*   |               | 931.2*   | [v0.59.0-rc3](https://github.com/tenstorrent/tt-metal/tree/v0.59.0-rc3) | [739dcaa](https://github.com/tenstorrent/vllm/tree/739dcaa2915fa29d757c25a02c17aadce0c58055/tt_metal) |",
+          "note": "同表中 Blackhole 条目共 3 行，均为 Llama 3.1 8B；> **Last Update:** June 23, 2025"
+        },
+        {
+          "source_id": "SRC-TT-2",
+          "url": "https://github.com/tenstorrent/tt-metal/blob/4cd196f3ce6b366fbcb7dfd59c10f02b61023aa1/README.md",
+          "publisher": "Tenstorrent（tt-metal 官方仓库）",
+          "published_at": "2025-07-11T16:33:05+00:00（提交 4cd196f3ce）",
+          "retrieved_via": "git clone https://github.com/tenstorrent/tt-metal（公开仓库）",
+          "quote": "\\* Blackhole software optimization is under active development.",
+          "note": "原文为表格脚注，引文截取其第一句（逐字）"
+        }
+      ]
+    }
+  ]
+}

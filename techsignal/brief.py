@@ -74,8 +74,8 @@ def _item(a: Assessment, ev: Evidence, event: ChangeEvent, th: Thesis, evidence:
         new_info.append(Statement(kind=K.FACT, text=f"另有 {hidden} 行变化未在速览中展开，见证据台账", evidence_ids=e))
 
     sources = [Statement(kind=K.FACT, evidence_ids=e, text=(
-        f"{ev.source_name}（{SOURCE_TYPE_ZH[ev.source_type]}）{ev.source_url}；观测于 {iso(ev.observed_at)}，"
-        f"对比基线 {iso(ev.baseline_at)}；追溯：changedetection.io {ev.cdio_difference_path}"))]
+        f"{ev.source_name}（{SOURCE_TYPE_ZH[ev.source_type]}）{ev.source_url}；changedetection.io 抓取于 {iso(ev.observed_at)}，"
+        f"对比其上一次抓取 {iso(ev.baseline_at)}（抓取时间不等于发布时间）；追溯：changedetection.io {ev.cdio_difference_path}"))]
 
     ctx = [Statement(kind=K.CONTEXT, thesis_ids=[th.thesis_id],
                      text=f"{th.title}：{th.conclusion}（截至 {th.as_of}，负责人 {th.owner}）")]

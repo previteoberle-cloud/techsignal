@@ -95,7 +95,7 @@ def _fetch_live(args) -> tuple[dict, dict]:
         "cdio_base_url": client.base_url,
         "cdio_version": info.get("version"),
         "request_params": params,
-        "fetched_at_utc": _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "fetched_at_utc": _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "http_requests": client.requests_made,
         "report_sha256": hashlib.sha256(canonical_json(report).encode("utf-8")).hexdigest(),
         "watches_in_report": len(report["watches"]),

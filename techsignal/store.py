@@ -54,7 +54,7 @@ class SourceRegistry:
             self._by_domain.setdefault(p.domain.lower(), []).append(p)
 
     @classmethod
-    def load(cls, path: Path) -> "SourceRegistry":
+    def load(cls, path: Path) -> SourceRegistry:
         data = _read_json(path)
         items = data.get("sources") if isinstance(data, dict) else None
         if not isinstance(items, list):

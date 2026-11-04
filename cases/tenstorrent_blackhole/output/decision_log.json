@@ -1,0 +1,50 @@
+{
+  "assessments": [
+    {
+      "assessment_id": "AS-48e85af43f",
+      "assumption_id": "BH1",
+      "basis": "rule",
+      "confidence": "high",
+      "conflicting_evidence_ids": [],
+      "direction": "weakens",
+      "event_id": "CE-ab96c45038",
+      "evidence_ids": [
+        "EV-7a5dcc9315"
+      ],
+      "limitations": [],
+      "matched_signals": [
+        "BH1·削弱信号「70B[^|]*\\|[^|]*\\|[^|]*Blackhole」出现在新增内容：| [Llama 3.1 70B (TP=4)](./models/tt_transformers)                 | 32    | [QuietBox (Blackhole)](https://tenstorrent.com/hardware/tt-quietbox) | 195*       | 14.9*  |               | 476.5*  | [v0.59.0-rc53](https://github.com/tenstorrent/tt-metal/tree/v0.59.0-rc53) | [f028da1](https://github.com/tenstorrent/vllm/tree/f028da11b5b8205272bf18a478de93bd2dd3e29e/tt_metal)      |"
+      ],
+      "model_rationale": null,
+      "open_questions": [],
+      "provider_name": null,
+      "rationale": [
+        "BH1·削弱信号「70B[^|]*\\|[^|]*\\|[^|]*Blackhole」出现在新增内容：| [Llama 3.1 70B (TP=4)](./models/tt_transformers)                 | 32    | [QuietBox (Blackhole)](https://tenstorrent.com/hardware/tt-quietbox) | 195*       | 14.9*  |               | 476.5*  | [v0.59.0-rc53](https://github.com/tenstorrent/tt-metal/tree/v0.59.0-rc53) | [f028da1](https://github.com/tenstorrent/vllm/tree/f028da11b5b8205272bf18a478de93bd2dd3e29e/tt_metal)      |"
+      ],
+      "recommended_action": "建议研究负责人复核 TH-TT-001 的假设 BH1；系统未修改结论状态",
+      "tentative_direction": null,
+      "thesis_id": "TH-TT-001",
+      "thesis_status_change": "none"
+    }
+  ],
+  "filtered": [],
+  "meta": {
+    "changes_total": 1,
+    "from": 1793772113,
+    "incomplete": false,
+    "mode": "net_change",
+    "monitors_checked": 1,
+    "to": 1793772116,
+    "total": 1
+  },
+  "provider": null,
+  "stats": {
+    "conflicts": 0,
+    "grade_downgrades": 0,
+    "notes": [],
+    "provider_calls": 0,
+    "provider_failures": 0,
+    "provider_rejections": 0,
+    "rule_decisions": 1
+  }
+}
