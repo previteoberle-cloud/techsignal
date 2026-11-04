@@ -1,10 +1,88 @@
 # TechSignal
 
-**用证据跟踪硬科技公司的公开信息变化，判断它对既有研究结论的影响。**
+**硬科技企业、行业和技术领域的公开信息采集与管理工具。**
 
-> *English summary* — TechSignal turns raw web-page changes captured by [changedetection.io](https://github.com/dgtlmoon/changedetection.io) into cited, reviewable research judgements: does a new change **support**, **weaken** or **not affect** an existing investment thesis, or is the evidence **insufficient**? It keeps an evidence ledger, tracks judgements across batches, runs a bounded, deterministic evidence-gathering step with real tools (allow-listed, budgeted, fully traced), and ships a Chinese browser workbench where a non-programmer can create a research project from plain text and run one monitored check against their own changedetection.io. An optional OpenAI-compatible model layer gives per-assumption suggestions that are validated and gated by the rules; **no real model has been called in this project** (no authorised service), and it is a research prototype, not a production service.
+建好采集任务，点一下「立即采集」，系统就从你指定的公开来源（RSS/Atom 订阅源、网页）取回新信息，去重归档，然后可以搜索、筛选、导出。全中文界面，不需要写代码。
 
-![工作台：跨批次总览](docs/screenshots/r4_02_cross_batch_overview.png)
+> *English summary* — TechSignal is a public-information collector for hard-tech companies, industries and technologies. Create a collection task in a Chinese browser workbench (name, companies/keywords, tags, public source URLs), click "collect now", and it fetches RSS/Atom feeds and web pages, deduplicates by stable id and content fingerprint, stores items locally, and lets you search, filter and export them (CSV/Markdown). Web pages can optionally be read through your own [changedetection.io](https://github.com/dgtlmoon/changedetection.io). An earlier research-judgement engine (thesis impact assessment, evidence ledger, bounded verification) is kept as an optional "advanced research" area. No paid API and no model is used.
+
+![信息采集首页](docs/screenshots/c03_after_second_collection.png)
+
+## 信息采集：快速上手
+
+### 能采集什么
+
+| 来源类型 | 怎么采集 | 每次采集新增的是 |
+|---|---|---|
+| RSS 2.0、RSS 1.0（RDF）、Atom 订阅源 | 直接读取 | 订阅源里还没有保存过的条目：标题、原始链接、发布时间、摘要 |
+| 普通网页 | 直接读取；也可以选择经你自己的 changedetection.io 读取 | 第一次：网页本身；之后：只有网页**新增**的文字，以「页面更新」条目保存 |
+
+- **去重：** 按稳定标识（订阅条目的 guid/id，或链接，或标题加日期）和内容指纹去重。多次采集只追加真正的新条目，同样的内容出现在两个来源里也只保存一次。
+- **失败处理：** 某个来源失败时，已有的信息全部保留；「采集状态」页写明失败原因，例如 HTTP 503、无法访问、XML 格式错误。
+- **安全：** 只采集公开地址，重定向到内网地址也会被拒绝；拒绝带 DOCTYPE/ENTITY 声明的 XML；单个来源最多 5 MB，超时 20 秒。
+- **不做的事：** 不使用付费 API，不使用模型；不能登录网站，不执行网页里的 JavaScript。
+
+### 启动
+
+**Windows：** 安装 Python 3.11 或以上（安装时勾选「Add python.exe to PATH」），下载或克隆本仓库后，双击 `scripts\start_windows.bat`。第一次运行会自动创建虚拟环境并安装依赖，之后浏览器打开 http://localhost:8501 。
+
+也可以在 PowerShell 中手动执行：
+
+```powershell
+cd TechSignal
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e ".[ui]"
+python -m techsignal.workbench
+```
+
+**macOS / Linux：**
+
+```bash
+python -m venv .venv && . .venv/bin/activate
+pip install -e ".[ui]"
+python -m techsignal.workbench
+```
+
+### 使用
+
+1. 首页就是「信息采集」。填写任务名称（例如「AI 芯片行业动态」）、关注的企业或关键词、分类标签，以及公开来源网址（每行一个，后面可以写来源名称），然后点「创建采集任务」。
+2. 点「立即采集」。信息流按时间倒序显示，点标题打开原始出处，命中的关键词会高亮。
+3. 可以按任务、来源、关键词、日期筛选，或者搜索标题和摘要。点「导出 CSV」或「导出 Markdown」导出当前筛选结果。CSV 带 BOM，用 Windows 的 Excel 直接打开中文不会乱码。
+4. 「采集状态」页查看每个来源的最近成功时间、失败原因和新增数量；「任务设置」页修改任务。
+
+### 数据保存在哪里
+
+- 默认在 `~/.techsignal/collector`，Windows 上是 `C:\Users\<你的用户名>\.techsignal\collector`。用环境变量 `TECHSIGNAL_COLLECTOR_ROOT` 可以改到别的目录。
+- 每个任务一个目录：`task.json`（任务定义）、`items.jsonl`（采集到的信息，只追加）、`status.json`（各来源状态）、`pages/`（网页上次的文字）。
+- 重启工作台后，历史数据都还在。
+
+不打开浏览器也可以用命令行：
+
+```bash
+python -m techsignal.collector list
+python -m techsignal.collector collect <任务编号>
+python -m techsignal.collector export <任务编号> --csv out.csv --md out.md
+```
+
+### 已经验证过的真实来源
+
+| 来源 | 验证方式 | 结果 |
+|---|---|---|
+| `raw.githubusercontent.com` 上 tenstorrent/tt-metal 的 README（网页） | 云开发环境中实际采集，用真实浏览器操作，重启后再采集一次；GitHub Actions 上同样执行 | 两次采集，第二次没有重复；重启后数据仍在 |
+| GitHub 发布记录 Atom（tenstorrent/tt-metal） | 只在 GitHub Actions（`live-cdio` job）中采集两次。云开发环境的网络策略拒绝访问，结果为 403 | 以 CI 结果为准 |
+| arXiv cs.AR RSS | 同上，只在 GitHub Actions 中验证 | 以 CI 结果为准 |
+| 经真实 changedetection.io 0.60.10 抓取网页 | 在线集成测试，使用本地测试页 | 首次记录、未变化时不重复、新增内容单独成条 |
+
+离线测试使用 `tests/fixtures/collector/` 中的虚构 RSS/Atom 数据，只用来验证逻辑，不当作真实采集结果。交接说明见 [docs/COLLECTOR_MVP_HANDOFF.md](docs/COLLECTOR_MVP_HANDOFF.md)。
+
+---
+
+# 高级研究（可选）：研究判断与研判
+
+下面是本项目早期开发的研判功能，现在在工作台的「高级研究」入口：判断网页变化对既有研究结论的影响、证据台账、有界补证、中文速览。日常的信息采集不需要它。
+
+![高级研究：跨批次总览](docs/screenshots/r4_02_cross_batch_overview.png)
 
 ## 1. 解决什么问题
 

@@ -122,7 +122,8 @@ def _feed(store: C.CollectorStore, tasks: list[C.Task]) -> None:
     keywords = sorted({k for t in tasks for k in t.keywords})
     f1, f2, f3 = st.columns([2, 2, 1.4])
     q = f1.text_input("搜索标题和摘要", key="c_q", placeholder="输入关键词")
-    src = f2.multiselect("来源", list(sources), format_func=lambda s: sources.get(s, s), key="c_src")
+    src = f2.multiselect("来源", list(sources), format_func=lambda s: sources.get(s, s), key="c_src",
+                         placeholder="全部来源")
     kw = f3.selectbox("关键词", ["（全部）"] + keywords, key="c_kw")
     g1, g2, g3 = st.columns([1.4, 1.4, 2])
     since = g1.date_input("开始日期", value=None, key="c_since")

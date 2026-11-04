@@ -123,6 +123,16 @@ jobs:
         run: |
           NODE_PATH=/tmp/pw/node_modules node docs/screenshots/r6_browser_check.js /tmp/r6/shots http://127.0.0.1:8611 /tmp/r6/info.json | tee /tmp/r6/browser.txt
           ! grep -E "false|OVERFLOW|FAILED" /tmp/r6/browser.txt
+      - name: Collector browser acceptance (real public source, restart in between)
+        run: |
+          SRC=https://raw.githubusercontent.com/tenstorrent/tt-metal/main/README.md
+          start() { TECHSIGNAL_COLLECTOR_ROOT=/tmp/r6/collector python -m techsignal.workbench --server.port 8621 > /tmp/r6/collector-$1.log 2>&1 &
+                    for i in $(seq 1 60); do curl -sf http://127.0.0.1:8621/_stcore/health && break; sleep 1; done; }
+          start 1
+          NODE_PATH=/tmp/pw/node_modules node docs/screenshots/collector_browser_check.js /tmp/r6/shots http://127.0.0.1:8621 collect $SRC | tee /tmp/r6/collector1.txt
+          pkill -f "server.port 8621"; sleep 3; start 2
+          NODE_PATH=/tmp/pw/node_modules node docs/screenshots/collector_browser_check.js /tmp/r6/shots http://127.0.0.1:8621 after-restart $SRC | tee /tmp/r6/collector2.txt
+          ! grep -E "false|OVERFLOW|FAILED" /tmp/r6/collector1.txt /tmp/r6/collector2.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -132,3 +142,4 @@ jobs:
             /tmp/r6/shots/
             /tmp/r6/*.log
             /tmp/r6/browser.txt
+            /tmp/r6/collector*.txt
