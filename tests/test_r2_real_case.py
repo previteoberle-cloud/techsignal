@@ -41,15 +41,24 @@ def test_observations_are_commit_pinned_public_versions():
 
 
 def test_replay_reproduces_live_outcome():
-    report = json.loads((OUT / "source_changes_report.json").read_text(encoding="utf-8"))
+    from techsignal import provenance as prov
+    text = (OUT / "source_changes_report.json").read_text(encoding="utf-8")
+    report = json.loads(text)
     theses = load_theses(CASE / "theses.json")
-    r = run_pipeline(report, theses, SourceRegistry.load(CASE / "sources.json"))
+    p = prov.for_file(text, theses, (OUT / "run_record.json").read_text(encoding="utf-8"))
+    r = run_pipeline(report, theses, SourceRegistry.load(CASE / "sources.json"), provenance=p)
     assert [(a.thesis_id, a.assumption_id, a.direction.value, a.basis.value) for a in r.assessments] == \
         [("TH-TT-001", "BH1", "weakens", "rule")]
     ev = next(iter(r.evidence.values()))
     assert ev.grade == EvidenceGrade.A and ev.source_type.value == "official"
     assert any("70B (TP=4)" in x and "QuietBox (Blackhole)" in x for x in ev.excerpt_added)
-    assert r.markdown == (OUT / "brief.md").read_text(encoding="utf-8")
+    # R3: the replay states it is a replay; the live brief states it was fetched live. The judgement
+    # content (items, evidence, decisions) must be identical.
+    live = json.loads((OUT / "brief.json").read_text(encoding="utf-8"))
+    assert r.brief.model_dump(mode="json")["items"] == live["items"]
+    assert live["provenance"]["input_origin"] == "live_cdio_api"
+    assert r.brief.provenance["input_origin"] == "replay_of_captured_live"
+    assert "离线回放" in r.markdown and "离线回放" not in (OUT / "brief.md").read_text(encoding="utf-8")
     assert theses[0].fictional is False and theses[0].status == "active"
 
 
@@ -77,7 +86,8 @@ def test_real_cross_batch_replay(tmp_path):
     out = tmp_path / "state"
     for n in (1, 2):
         src = CB / f"batch{n}" / "source_changes_report.json"
-        assert main(["run", "--changes", str(src), "--theses", str(CASE / "theses.json"),
+        assert main(["run", "--changes", str(src), "--input-record", str(CB / f"batch{n}" / "run_record.json"),
+                     "--theses", str(CASE / "theses.json"),
                      "--sources", str(CASE / "sources.json"), "--out", str(out), "--track-history"]) == 0
         if n == 1:
             (a,) = json.loads((out / "decision_log.json").read_text(encoding="utf-8"))["assessments"]
@@ -87,8 +97,13 @@ def test_real_cross_batch_replay(tmp_path):
     assert (a["assumption_id"], a["direction"], a["basis"]) == ("BH1", "insufficient", "rule")
     (t,) = log["cross_batch_transitions"]
     assert (t["kind"], t["before_state"], t["after_state"]) == ("unresolved", "削弱", "证据不足")
-    for f in ("brief.md", "decision_log.json", "judgements.jsonl", "evidence.jsonl"):
+    for f in ("judgements.jsonl", "evidence.jsonl"):
         assert (out / f).read_text(encoding="utf-8") == (CB / "batch2" / f).read_text(encoding="utf-8"), f
+    live_log = json.loads((CB / "batch2" / "decision_log.json").read_text(encoding="utf-8"))
+    assert log["assessments"] == live_log["assessments"]
+    assert log["cross_batch_transitions"] == live_log["cross_batch_transitions"]
+    assert (log["provenance"]["input_origin"], live_log["provenance"]["input_origin"]) == \
+        ("replay_of_captured_live", "live_cdio_api")
     assert json.loads((CASE / "theses.json").read_text(encoding="utf-8"))["theses"][0]["status"] == "active"
 
 

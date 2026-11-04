@@ -1,1 +1,1 @@
-{"run_id":"RUN-d10ea270","period_to":1793772617,"assessment_id":"AS-41f0114727","thesis_id":"TH-TT-001","assumption_id":"BH1","direction":"weakens","tentative_direction":null,"basis":"rule","evidence_ids":["EV-7446cadb69"],"evidence_grade":"A","source_name":"Tenstorrent 官方 GitHub 仓库（raw）"}
+{"run_id":"RUN-e42bad51","period_to":1793774185,"assessment_id":"AS-f1f7b4fabb","thesis_id":"TH-TT-001","assumption_id":"BH1","direction":"weakens","tentative_direction":null,"basis":"rule","evidence_ids":["EV-0f9b1f3844"],"evidence_grade":"A","source_name":"Tenstorrent 官方 GitHub 仓库（raw）"}

@@ -42,7 +42,7 @@ Tenstorrent 新一代 AI 加速芯片 **Blackhole** 的大模型推理软件支�
 | 类别 | 内容 | 依据 |
 |---|---|---|
 | **事实** | 2025-07-11 之前的官方模型表中，Blackhole 只有 Llama 3.1 8B 的数据，且均标注 `*`（软件优化进行中） | SRC-TT-1、SRC-TT-2，提交 `4cd196f` |
-| **事实** | 提交 `168a956` 新增「Llama 3.1 70B (TP=4)，QuietBox (Blackhole)」一行：ttft 195\* ms，14.9\* t/s/u，476.5\* t/s | 证据 EV-7a5dcc9315（`output/evidence.jsonl`），A 级（公司官方） |
+| **事实** | 提交 `168a956` 新增「Llama 3.1 70B (TP=4)，QuietBox (Blackhole)」一行：ttft 195\* ms，14.9\* t/s/u，476.5\* t/s | 证据 EV-43c4e1797e（`output/evidence.jsonl`），A 级（公司官方） |
 | **事实** | 同一表中，Wormhole 平台的 QuietBox 跑同一模型（TP=8）为 15.9 t/s/u、508.8 t/s | 同一提交 |
 | **系统研判（规则层）** | 假设 BH1「Blackhole 平台上尚无 70B 级大模型的官方性能记录」被**削弱**；系统建议复核 TH-TT-001，没有自动修改结论 | `output/decision_log.json`，判定层为确定性规则 |
 | **推测（未经证实）** | 70B 模型在 Blackhole 上用 4 路张量并行（TP=4）就跑出了接近 Wormhole 用 8 路（TP=8）的单用户吞吐，**可能**意味着 Blackhole 单芯片能力更强 | 仅从同表数字推出；两行的配置、版本和测量条件未必可比 |

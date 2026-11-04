@@ -112,14 +112,21 @@ def cmd_run(args) -> int:
 
     out = Path(args.out)
     try:
+        from . import provenance as prov
+        theses = load_theses(Path(args.theses))
         if args.cdio_url:
             if args.from_ts is None:
                 raise ValueError("--cdio-url 需要同时给出 --from")
+            if args.input_record:
+                raise ValueError("--input-record 只用于离线回放（--changes）")
             report, record = _fetch_live(args)
             source = report
+            provenance = prov.for_live(record, theses)
         else:
             report = record = None
             source = Path(args.changes).read_text(encoding="utf-8")
+            capture = Path(args.input_record).read_text(encoding="utf-8") if args.input_record else None
+            provenance = prov.for_file(source, theses, capture)
         # Nothing under `out` is touched until the run has fully succeeded. Without --append-ledger
         # the ledger simply starts empty in memory; the old file is replaced only at commit time.
         keep_state = args.append_ledger or args.track_history
@@ -127,9 +134,9 @@ def cmd_run(args) -> int:
         history = JudgementHistory(out / "judgements.jsonl") if args.track_history else None
         provider = _provider(args)
         result = run_pipeline(
-            source, load_theses(Path(args.theses)), SourceRegistry.load(Path(args.sources)),
+            source, theses, SourceRegistry.load(Path(args.sources)),
             provider=provider, ledger=ledger, persist=False,
-            history=history.records if history is not None else None)
+            history=history.records if history is not None else None, provenance=provenance)
         files = {
             "evidence.jsonl": ledger.serialize(),
             "decision_log.json": canonical_json(result.decision_log()) + "\n",
@@ -198,6 +205,7 @@ def main(argv=None) -> int:
     r.add_argument("--to", dest="to_ts", type=int, help="在线模式：结束时间（unix 秒，默认当前）")
     r.add_argument("--tag", help="在线模式：只取某个分组")
     r.add_argument("--uuids", help="在线模式：逗号分隔的监测项 uuid")
+    r.add_argument("--input-record", help="离线回放：在线拉取时生成的 run_record.json（会核对 sha256）")
     r.add_argument("--page-size", type=int, default=50)
     r.add_argument("--timeout", type=float, default=30.0)
     r.add_argument("--theses", required=True)

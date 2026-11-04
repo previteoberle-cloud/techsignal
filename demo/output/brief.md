@@ -1,9 +1,9 @@
 # TechSignal 研究速览｜2026-10-01 至 2026-10-31
 
-> 本速览为 TechSignal R1 研究原型的输出，不构成投资建议。
-> 输入为 changedetection.io GET /api/v1/changes?format=json 的离线数据；R1 未接入在线服务。
-> 结论状态不会因新信息自动改变；「削弱」仅触发人工复核建议。
-> 标注「Mock 回放（人工预置，非真实模型推理）」的判断来自人工预置的 Mock 回放（mock-replay），不是真实大模型推理。
+> 本速览由 TechSignal 研究原型生成，不构成投资建议。研究结论不会因新信息自动改变，「削弱」只触发人工复核建议。
+> 输入：离线虚构 Fixture（changedetection.io ChangesReport 格式；没有在线运行记录，本次运行没有连接 changedetection.io）。
+> 数据性质：虚构测试数据（研究判断均标注为虚构）。
+> 模型层：Mock 回放（mock-replay），共 1 条判断来自人工预置的回放数据，不是真实大模型推理；标注「Mock 回放」的判断即是。
 
 ## 概览
 

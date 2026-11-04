@@ -1,8 +1,9 @@
 {
   "disclaimers": [
-    "本速览为 TechSignal R1 研究原型的输出，不构成投资建议。",
-    "输入为 changedetection.io GET /api/v1/changes?format=json 的离线数据；R1 未接入在线服务。",
-    "结论状态不会因新信息自动改变；「削弱」仅触发人工复核建议。"
+    "本速览由 TechSignal 研究原型生成，不构成投资建议。研究结论不会因新信息自动改变，「削弱」只触发人工复核建议。",
+    "输入：TechSignal 于 2026-11-04T06:36:27Z 通过 REST API 在线拉取 changedetection.io 0.60.10（http://127.0.0.1:48715）的变化数据（GET /api/v1/changes）。",
+    "数据性质：真实公开资料。",
+    "模型层：未配置；本速览中的判断全部由确定性规则作出。"
   ],
   "filtered": [],
   "items": [
@@ -21,10 +22,10 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
-          "text": "EV-5f873c4ac3：A｜公司官方一手披露",
+          "text": "EV-5799d2f2db：A｜公司官方一手披露",
           "thesis_ids": []
         }
       ],
@@ -33,7 +34,7 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "inference",
           "text": "影响方向：证据不足，需要核实；置信度 low；判定层：确定性规则",
@@ -49,12 +50,12 @@
           ]
         }
       ],
-      "item_id": "AS-87c1503ac2",
+      "item_id": "AS-4d73aaa190",
       "new_info": [
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
           "text": "新增：| 0.62.0 | ETA Aug 13, 2025 |",
@@ -63,7 +64,7 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
           "text": "新增：| 0.61.0 | Skipped |",
@@ -72,7 +73,7 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
           "text": "新增：| 0.60.1 | Jul 22, 2025 |",
@@ -81,7 +82,7 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
           "text": "新增：## Featured Models",
@@ -90,7 +91,7 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
           "text": "新增：The Models team is focused on developing the following models to a customer-ready state. Ongoing work includes optimizations for performance, accuracy, and com…",
@@ -99,7 +100,7 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
           "text": "删除：| Llama 3.1 70B (TP=4) | 32 | QuietBox (Blackhole) | 195* | 14.9* | | 476.5* | v0.59.0-rc53 | f028da1 |",
@@ -108,7 +109,7 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
           "text": "删除：| 0.60.0 | Jul 18, 2025 |",
@@ -117,7 +118,7 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
           "text": "删除：## LLMs",
@@ -126,7 +127,7 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
           "text": "删除：| Model | Batch | Hardware | ttft (ms) | t/s/u | Target<br>t/s/u | t/s | TT-Metalium Release | vLLM Tenstorrent Repo Release |",
@@ -135,7 +136,7 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
           "text": "删除：| Qwen 3 32B (TP=8) | 32 | QuietBox (Wormhole) | 109 | 22.1 | 30 | 707.2 | v0.59.0-rc52 | f028da1 |",
@@ -144,7 +145,7 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
           "text": "另有 123 行变化未在速览中展开，见证据台账",
@@ -165,7 +166,7 @@
         {
           "basis": "rule",
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "inference",
           "text": "规则层：命中的信号处于否定语境或出现在被删除的内容中，规则层不做方向判断：BH1·削弱信号「70B[^|]*\\|[^|]*\\|[^|]*Blackhole」出现在删除内容：| Llama 3.1 70B (TP=4) | 32 | QuietBox (Blackhole) | 195* | 14.9* | | 476.5* | v0.59.0-rc53 | f028da1 |",
@@ -174,7 +175,7 @@
         {
           "basis": "rule",
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "inference",
           "text": "规则层：规则层无法判定，且未配置模型 Provider",
@@ -185,10 +186,10 @@
         {
           "basis": null,
           "evidence_ids": [
-            "EV-5f873c4ac3"
+            "EV-5799d2f2db"
           ],
           "kind": "fact",
-          "text": "Tenstorrent 官方 GitHub 仓库（raw）（公司官方）https://raw.githubusercontent.com/tenstorrent/tt-metal/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46/README.md；changedetection.io 抓取于 2026-11-04 06:10 UTC，对比其上一次抓取 2026-11-04 06:10 UTC（抓取时间不等于发布时间）；追溯：changedetection.io /api/v1/watch/99a85885-68fe-485e-b34e-f773d5453407/difference/1793772617/1793772619",
+          "text": "Tenstorrent 官方 GitHub 仓库（raw）（公司官方）https://raw.githubusercontent.com/tenstorrent/tt-metal/62f3cd0a4ff2e82d01af500eb5800cfcb6703d46/README.md；changedetection.io 抓取于 2026-11-04 06:36 UTC，对比其上一次抓取 2026-11-04 06:36 UTC（抓取时间不等于发布时间）；追溯：changedetection.io /api/v1/watch/2bf86f66-fc86-4ba0-8850-553514ab421d/difference/1793774185/1793774187",
           "thesis_ids": []
         }
       ],
@@ -233,8 +234,22 @@
     }
   ],
   "mock_used": false,
-  "period_from": 1793772617,
-  "period_to": 1793772619,
+  "period_from": 1793774185,
+  "period_to": 1793774187,
+  "provenance": {
+    "cdio_base_url": "http://127.0.0.1:48715",
+    "cdio_version": "0.60.10",
+    "data_nature": "public",
+    "fetched_at_utc": "2026-11-04T06:36:27Z",
+    "input_mode": "live_cdio_api",
+    "input_origin": "live_cdio_api",
+    "model_judgements": 0,
+    "model_layer": "none",
+    "model_name": null,
+    "report_sha256": "8ee6d559ab597ce8c301ccee26569a949440e718bdb508c49a131717a517429e",
+    "verification": "off",
+    "verification_tool_calls": 0
+  },
   "stats": {
     "assessments": 1,
     "events_filtered": 0,
@@ -249,11 +264,11 @@
     {
       "basis": "rule",
       "evidence_ids": [
-        "EV-7446cadb69",
-        "EV-5f873c4ac3"
+        "EV-0f9b1f3844",
+        "EV-5799d2f2db"
       ],
       "kind": "inference",
-      "text": "TH-TT-001·BH1：新变化无法定向，保留原判断待核实。之前：削弱（批次 RUN-d10ea270） → 现在：证据不足。原因：新变化涉及该假设但无法判定方向（如相关内容被删除、处于否定语境），保留历史判断并标记待核实；研究结论本身未被修改",
+      "text": "TH-TT-001·BH1：新变化无法定向，保留原判断待核实。之前：削弱（批次 RUN-e42bad51） → 现在：证据不足。原因：新变化涉及该假设但无法判定方向（如相关内容被删除、处于否定语境），保留历史判断并标记待核实；研究结论本身未被修改",
       "thesis_ids": [
         "TH-TT-001"
       ]

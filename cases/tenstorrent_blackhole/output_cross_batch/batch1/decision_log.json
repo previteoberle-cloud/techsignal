@@ -1,15 +1,15 @@
 {
   "assessments": [
     {
-      "assessment_id": "AS-41f0114727",
+      "assessment_id": "AS-f1f7b4fabb",
       "assumption_id": "BH1",
       "basis": "rule",
       "confidence": "high",
       "conflicting_evidence_ids": [],
       "direction": "weakens",
-      "event_id": "CE-b5a135f0e8",
+      "event_id": "CE-a520352460",
       "evidence_ids": [
-        "EV-7446cadb69"
+        "EV-0f9b1f3844"
       ],
       "limitations": [],
       "matched_signals": [
@@ -30,7 +30,7 @@
   "cross_batch_transitions": [
     {
       "after_evidence_ids": [
-        "EV-7446cadb69"
+        "EV-0f9b1f3844"
       ],
       "after_state": "削弱",
       "assumption_id": "BH1",
@@ -45,12 +45,26 @@
   "filtered": [],
   "meta": {
     "changes_total": 1,
-    "from": 1793772615,
+    "from": 1793774183,
     "incomplete": false,
     "mode": "net_change",
     "monitors_checked": 1,
-    "to": 1793772617,
+    "to": 1793774185,
     "total": 1
+  },
+  "provenance": {
+    "cdio_base_url": "http://127.0.0.1:48715",
+    "cdio_version": "0.60.10",
+    "data_nature": "public",
+    "fetched_at_utc": "2026-11-04T06:36:27Z",
+    "input_mode": "live_cdio_api",
+    "input_origin": "live_cdio_api",
+    "model_judgements": 0,
+    "model_layer": "none",
+    "model_name": null,
+    "report_sha256": "0915e834d89ee58c56831d4156ba8278249c9dedc4427eb257bbcce1b5926284",
+    "verification": "off",
+    "verification_tool_calls": 0
   },
   "provider": null,
   "stats": {

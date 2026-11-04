@@ -121,7 +121,8 @@ def _item(a: Assessment, ev: Evidence, event: ChangeEvent, th: Thesis, evidence:
 
 def build_brief(meta: dict, events: list[ChangeEvent], evidence: dict[str, Evidence],
                 assessments: list[Assessment], filtered: list[FilteredEvent], theses: list[Thesis],
-                provider_name: str | None, provider_is_mock: bool, transitions: list | None = None) -> Brief:
+                provider_name: str | None, provider_is_mock: bool, transitions: list | None = None,
+                provenance=None) -> Brief:
     ev_by_id = {e.event_id: e for e in events}
     th_by_id = {t.thesis_id: t for t in theses}
 
@@ -139,17 +140,13 @@ def build_brief(meta: dict, events: list[ChangeEvent], evidence: dict[str, Evide
     items.sort(key=lambda i: (i.priority, i.headline, i.item_id))
 
     mock_used = any(a.basis == Basis.MOCK_MODEL for a in assessments)
-    disclaimers = [
-        "本速览为 TechSignal R1 研究原型的输出，不构成投资建议。",
-        "输入为 changedetection.io GET /api/v1/changes?format=json 的离线数据；R1 未接入在线服务。",
-        "结论状态不会因新信息自动改变；「削弱」仅触发人工复核建议。",
-    ]
-    if mock_used:
-        disclaimers.append(
-            f"标注「{BASIS_ZH[Basis.MOCK_MODEL]}」的判断来自人工预置的 Mock 回放（{provider_name}），"
-            "不是真实大模型推理。")
-    elif provider_name and not provider_is_mock:
-        disclaimers.append(f"标注「模型推断」的判断来自 {provider_name}。")
+    # Every statement about where the data came from is derived from the run's provenance record
+    # (provenance.py), never hard-coded (R3 / P0).
+    from .provenance import disclaimers as _disclaimers
+    if provenance is None:
+        from .provenance import RunProvenance, data_nature
+        provenance = RunProvenance(input_mode="file", input_origin="file_unverified", data_nature=data_nature(theses))
+    disclaimers = _disclaimers(provenance)
 
     stats = {
         "events_total": len(events),
@@ -171,7 +168,8 @@ def build_brief(meta: dict, events: list[ChangeEvent], evidence: dict[str, Evide
              for t in (transitions or [])]
     return Brief(transitions=trans, title=f"TechSignal 研究速览｜{iso(meta['from'])[:10]} 至 {iso(meta['to'])[:10]}",
                  period_from=meta["from"], period_to=meta["to"], items=items, unrelated=unrelated,
-                 filtered=filtered, disclaimers=disclaimers, mock_used=mock_used, stats=stats)
+                 filtered=filtered, disclaimers=disclaimers, mock_used=mock_used, stats=stats,
+                 provenance=provenance.model_dump(mode="json"))
 
 
 # ---------------------------------------------------------------------------

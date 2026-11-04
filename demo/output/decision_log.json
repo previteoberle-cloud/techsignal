@@ -256,6 +256,20 @@
     "to": 1793491199,
     "total": 11
   },
+  "provenance": {
+    "cdio_base_url": null,
+    "cdio_version": null,
+    "data_nature": "fictional",
+    "fetched_at_utc": null,
+    "input_mode": "file",
+    "input_origin": "file_unverified",
+    "model_judgements": 1,
+    "model_layer": "mock_replay",
+    "model_name": "mock-replay",
+    "report_sha256": null,
+    "verification": "off",
+    "verification_tool_calls": 0
+  },
   "provider": "mock-replay",
   "stats": {
     "conflicts": 1,

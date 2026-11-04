@@ -1,15 +1,15 @@
 {
   "assessments": [
     {
-      "assessment_id": "AS-87c1503ac2",
+      "assessment_id": "AS-4d73aaa190",
       "assumption_id": "BH1",
       "basis": "rule",
       "confidence": "low",
       "conflicting_evidence_ids": [],
       "direction": "insufficient",
-      "event_id": "CE-d1aed86896",
+      "event_id": "CE-ffeff859c9",
       "evidence_ids": [
-        "EV-5f873c4ac3"
+        "EV-5799d2f2db"
       ],
       "limitations": [],
       "matched_signals": [
@@ -33,14 +33,14 @@
   "cross_batch_transitions": [
     {
       "after_evidence_ids": [
-        "EV-5f873c4ac3"
+        "EV-5799d2f2db"
       ],
       "after_state": "证据不足",
       "assumption_id": "BH1",
       "before_evidence_ids": [
-        "EV-7446cadb69"
+        "EV-0f9b1f3844"
       ],
-      "before_run_id": "RUN-d10ea270",
+      "before_run_id": "RUN-e42bad51",
       "before_state": "削弱",
       "explanation": "新变化涉及该假设但无法判定方向（如相关内容被删除、处于否定语境），保留历史判断并标记待核实",
       "kind": "unresolved",
@@ -50,12 +50,26 @@
   "filtered": [],
   "meta": {
     "changes_total": 1,
-    "from": 1793772617,
+    "from": 1793774185,
     "incomplete": false,
     "mode": "net_change",
     "monitors_checked": 1,
-    "to": 1793772619,
+    "to": 1793774187,
     "total": 1
+  },
+  "provenance": {
+    "cdio_base_url": "http://127.0.0.1:48715",
+    "cdio_version": "0.60.10",
+    "data_nature": "public",
+    "fetched_at_utc": "2026-11-04T06:36:27Z",
+    "input_mode": "live_cdio_api",
+    "input_origin": "live_cdio_api",
+    "model_judgements": 0,
+    "model_layer": "none",
+    "model_name": null,
+    "report_sha256": "8ee6d559ab597ce8c301ccee26569a949440e718bdb508c49a131717a517429e",
+    "verification": "off",
+    "verification_tool_calls": 0
   },
   "provider": null,
   "stats": {

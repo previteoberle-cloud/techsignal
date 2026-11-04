@@ -1,15 +1,15 @@
 {
   "assessments": [
     {
-      "assessment_id": "AS-48e85af43f",
+      "assessment_id": "AS-9e636218f0",
       "assumption_id": "BH1",
       "basis": "rule",
       "confidence": "high",
       "conflicting_evidence_ids": [],
       "direction": "weakens",
-      "event_id": "CE-ab96c45038",
+      "event_id": "CE-71fc44b3e6",
       "evidence_ids": [
-        "EV-7a5dcc9315"
+        "EV-43c4e1797e"
       ],
       "limitations": [],
       "matched_signals": [
@@ -30,12 +30,26 @@
   "filtered": [],
   "meta": {
     "changes_total": 1,
-    "from": 1793772113,
+    "from": 1793774154,
     "incomplete": false,
     "mode": "net_change",
     "monitors_checked": 1,
-    "to": 1793772116,
+    "to": 1793774158,
     "total": 1
+  },
+  "provenance": {
+    "cdio_base_url": "http://127.0.0.1:46777",
+    "cdio_version": "0.60.10",
+    "data_nature": "public",
+    "fetched_at_utc": "2026-11-04T06:35:58Z",
+    "input_mode": "live_cdio_api",
+    "input_origin": "live_cdio_api",
+    "model_judgements": 0,
+    "model_layer": "none",
+    "model_name": null,
+    "report_sha256": "22f22038a68d18cdbccf8674f3016d0e5ddbe165b2d28bc77927681492ba33e0",
+    "verification": "off",
+    "verification_tool_calls": 0
   },
   "provider": null,
   "stats": {

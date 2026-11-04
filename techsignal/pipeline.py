@@ -46,6 +46,7 @@ class RunResult:
     def decision_log(self) -> dict:
         return {
             "meta": self.meta,
+            "provenance": self.brief.provenance,
             "provider": self.provider_name,
             "stats": asdict(self.stats),
             "filtered": [f.model_dump(mode="json") for f in self.filtered],
@@ -65,7 +66,7 @@ class RunResult:
 def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
                  provider: LLMProvider | None = None, ledger: EvidenceLedger | None = None,
                  validate: bool = True, persist: bool = True,
-                 history: list[JudgementRecord] | None = None) -> RunResult:
+                 history: list[JudgementRecord] | None = None, provenance=None) -> RunResult:
     """Run the whole chain. The ledger is written only at the very end, after validation passed,
     and only when persist=True and the ledger has a path. The CLI passes persist=False and commits
     the ledger together with the other outputs (see cli._commit_outputs).
@@ -133,8 +134,13 @@ def run_pipeline(report: Any, theses: list[Thesis], sources: SourceRegistry,
     provider_name = getattr(provider, "name", None) if provider else None
     # Conflicting evidence may come from earlier batches (history mode): look it up in the ledger.
     evidence_lookup = {i: ledger.get(i) for i in ledger.ids()} | used_evidence
+    from .provenance import RunProvenance, data_nature, with_model_usage
+    if provenance is None:
+        provenance = RunProvenance(input_mode="file", input_origin="file_unverified", data_nature=data_nature(theses))
+    provenance = with_model_usage(provenance, provider, assessments)
     brief = build_brief(meta, events, evidence_lookup, assessments, filtered, theses,
-                        provider_name, bool(provider and provider.is_mock), transitions=transitions)
+                        provider_name, bool(provider and provider.is_mock), transitions=transitions,
+                        provenance=provenance)
     md = render_markdown(brief)
     if validate:
         assert_valid(brief, md, ledger.ids(), {t.thesis_id for t in theses})

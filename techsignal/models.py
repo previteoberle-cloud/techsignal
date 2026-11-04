@@ -301,6 +301,7 @@ class Brief(_Strict):
     mock_used: bool
     stats: dict[str, int]
     transitions: list[Statement] = Field(default_factory=list)
+    provenance: dict | None = None   # RunProvenance.model_dump(); see provenance.py
 
     def all_statements(self) -> list[Statement]:
         out: list[Statement] = []
