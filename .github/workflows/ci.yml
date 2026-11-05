@@ -25,6 +25,8 @@ jobs:
       - run: pip install -e ".[test]"
       - run: python -m pytest -v
       - run: python -m techsignal eval
+      - name: R6 evaluation set (rule layer + protocol stub; a real model is BLOCKED without authorisation)
+        run: python -m techsignal.eval_r6
 
   ui:
     # Research workbench: data layer + Streamlit script via streamlit.testing, then a real start-up.
@@ -85,3 +87,59 @@ jobs:
           # the workflow's own token, only to read public commit metadata from api.github.com
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: TECHSIGNAL_CDIO_PYTHON="$(which python)" TECHSIGNAL_LIVE_NETWORK=1 python -m pytest -v tests/integration
+
+  r6-browser:
+    # R6 acceptance in a real Chromium: create a project in the workbench, link a REAL changedetection.io
+    # (pinned commit), check twice around a change of a local test page, read the explained judgement.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: scripts/fetch_changedetection.sh .upstream/changedetection.io
+      - name: Install changedetection.io requirements, TechSignal and Playwright
+        run: |
+          pip install -r .upstream/changedetection.io/requirements.txt
+          pip install -e ".[test,ui]"
+          npm install --prefix /tmp/pw playwright@1.63.0
+          /tmp/pw/node_modules/.bin/playwright install --with-deps chromium
+      - name: Start changedetection.io with a local test page, and the workbench
+        env:
+          TECHSIGNAL_CDIO_SOURCE: ${{ github.workspace }}/.upstream/changedetection.io
+        run: |
+          mkdir -p /tmp/r6/shots
+          python scripts/r6_acceptance_env.py "$(which python)" /tmp/r6/info.json > /tmp/r6/env.log 2>&1 &
+          TECHSIGNAL_PROJECTS_ROOT=/tmp/r6/projects TECHSIGNAL_ALLOW_PRIVATE_URLS=1 \
+            python -m techsignal.workbench --server.port 8611 > /tmp/r6/wb.log 2>&1 &
+          for i in $(seq 1 90); do [ -f /tmp/r6/info.json ] && curl -sf http://127.0.0.1:8611/_stcore/health && break; sleep 2; done
+          test -f /tmp/r6/info.json
+      - name: Browser acceptance
+        run: |
+          NODE_PATH=/tmp/pw/node_modules node docs/screenshots/r6_browser_check.js /tmp/r6/shots http://127.0.0.1:8611 /tmp/r6/info.json | tee /tmp/r6/browser.txt
+          ! grep -E "false|OVERFLOW|FAILED" /tmp/r6/browser.txt
+      - name: Collector browser acceptance (real public source, restart in between)
+        run: |
+          SRC=https://raw.githubusercontent.com/tenstorrent/tt-metal/main/README.md
+          start() { TECHSIGNAL_COLLECTOR_ROOT=/tmp/r6/collector python -m techsignal.workbench --server.port 8621 > /tmp/r6/collector-$1.log 2>&1 &
+                    for i in $(seq 1 60); do curl -sf http://127.0.0.1:8621/_stcore/health && break; sleep 1; done; }
+          start 1
+          NODE_PATH=/tmp/pw/node_modules node docs/screenshots/collector_browser_check.js /tmp/r6/shots http://127.0.0.1:8621 collect $SRC | tee /tmp/r6/collector1.txt
+          pkill -f "server.port 8621"; sleep 3; start 2
+          NODE_PATH=/tmp/pw/node_modules node docs/screenshots/collector_browser_check.js /tmp/r6/shots http://127.0.0.1:8621 after-restart $SRC | tee /tmp/r6/collector2.txt
+          ! grep -E "false|OVERFLOW|FAILED" /tmp/r6/collector1.txt /tmp/r6/collector2.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r6-browser-acceptance
+          # screenshots and logs only (info.json holds the throwaway instance's API key)
+          path: |
+            /tmp/r6/shots/
+            /tmp/r6/*.log
+            /tmp/r6/browser.txt
+            /tmp/r6/collector*.txt

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>示例发布记录（离线固定数据）</title>
+<entry><id>tag:example.com,2026:v1.2</id><title>v1.2 发布</title><link rel="alternate" href="https://example.com/releases/v1.2"/>
+<updated>2026-11-01T10:00:00Z</updated><content type="html">&lt;p&gt;支持 Blackhole&lt;/p&gt;</content></entry>
+<entry><id>tag:example.com,2026:v1.1</id><title>v1.1 发布</title><link href="https://example.com/releases/v1.1"/>
+<updated>2026-10-01T10:00:00Z</updated><summary>修复若干问题</summary></entry>
+</feed>

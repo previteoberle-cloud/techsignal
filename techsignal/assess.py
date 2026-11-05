@@ -24,7 +24,8 @@ from .models import (
     Thesis,
     short_hash,
 )
-from .providers import LLMProvider, ModelRequest, ProviderError
+from .labels import CHANGE_KIND
+from .providers import LLMProvider, ModelRequest, ProviderBudgetExceeded, ProviderError
 from .triage import TriageResult
 
 _CONF_ORDER = ["low", "medium", "high"]
@@ -123,6 +124,151 @@ def _from_model(event, t, evidence, match, outcome, provider, stats) -> Assessme
                                 else "该判断来自模型推断，需研究员确认"])
 
 
+def _limit_lines(added: list[str], removed: list[str], max_chars: int) -> tuple[list[str], list[str], int]:
+    """Cut the change text sent to a model to max_chars (added lines first). Returns the dropped count."""
+    out_a, out_r, used, dropped = [], [], 0, 0
+    for src, dst in ((added, out_a), (removed, out_r)):
+        for line in src:
+            line = line[:1000]
+            if used + len(line) > max_chars:
+                dropped += 1
+                continue
+            dst.append(line)
+            used += len(line)
+    return out_a, out_r, dropped
+
+
+def _from_model_multi(event, t, evidence, match, outcome, provider, stats) -> list[Assessment]:
+    """R6: one model call -> a verdict per assumption, each validated and gated by the rules.
+
+    Raw model output is kept in model_suggestion; `direction` is what survives the gates; every
+    judgement asks for human review. Failure, timeout, malformed output or an exhausted call budget
+    fall back to a conservative rule outcome (insufficient), never to a guess."""
+    thesis = match.thesis
+    notes = list(outcome.reasons)
+    basis = Basis.MOCK_MODEL if provider.is_mock else Basis.MODEL
+    added, removed, dropped = _limit_lines(t.meaningful_added, t.meaningful_removed,
+                                           int(getattr(provider, "max_input_chars", 6000)))
+    limits = [f"变化内容较长，只有前 {len(added) + len(removed)} 行提供给模型，另有 {dropped} 行未提供"] if dropped else []
+    if dropped and getattr(provider, "usage", None) is not None:
+        provider.usage.inputs_truncated += 1
+    req = ModelRequest(
+        replay_key=f"{event.replay_key}#{thesis.thesis_id}", thesis=thesis, event_title=event.title,
+        event_url=event.url, added_lines=added, removed_lines=removed, evidence_ids=[evidence.evidence_id],
+        source_grade=evidence.grade.value, rule_notes=notes)
+    signals = [s.describe() for s in outcome.signals]
+
+    def conservative(source: str, reason: str, assumption_id=None, suggestion=None, suffix="", extra=()):
+        return _new(event, thesis, evidence, id_suffix=suffix, direction=Direction.INSUFFICIENT, basis=Basis.RULE,
+                    provider_name=provider.name, assumption_id=assumption_id or outcome.assumption_id,
+                    rationale=notes + [reason], matched_signals=signals, judgement_source=source,
+                    model_suggestion=suggestion, change_kind=(suggestion or {}).get("change_kind"),
+                    gate_log=[reason, *extra], review_status="pending_human",
+                    limitations=limits + ["本条没有采用模型建议，按证据不足处理"],
+                    open_questions=["需要人工阅读变化原文，判断其与关键假设的关系"])
+
+    stats.provider_calls += 1
+    try:
+        analysis = provider.analyze(req)
+    except ProviderBudgetExceeded as e:
+        stats.provider_calls -= 1
+        return [conservative("model_skipped", f"未调用模型：{e}")]
+    except ProviderError as e:
+        stats.provider_failures += 1
+        return [conservative("model_failed", f"模型层调用失败或输出格式错误（{e}），按证据不足处理")]
+
+    from .verify.tools import looks_like_injection
+    injected = any(looks_like_injection(x) for x in added + removed)
+    valid = {a.assumption_id for a in thesis.assumptions}
+    allowed = set(req.evidence_ids)
+    accepted, rejected = [], []
+    dirs_by_aid: dict[str, set] = defaultdict(set)
+    for v in analysis.assessments:
+        dirs_by_aid[v.assumption_id].add(v.direction)
+    for v in analysis.assessments:
+        bad = [c for c in v.cited_evidence_ids if c not in allowed]
+        if v.assumption_id not in valid:
+            reason = f"引用了研究判断中不存在的假设 {v.assumption_id}"
+        elif bad:
+            reason = f"引用了不存在或不属于本次变化的证据编号 {', '.join(bad)}"
+        elif v.direction in (Direction.SUPPORTS, Direction.WEAKENS) and not v.cited_evidence_ids:
+            reason = "给出了方向判断但未引用任何证据"
+        elif not v.rationale.strip():
+            reason = "未给出判断理由"
+        elif len(dirs_by_aid[v.assumption_id]) > 1:
+            reason = f"对同一假设 {v.assumption_id} 给出了相互矛盾的结论"
+        else:
+            reason = None
+        (rejected if reason else accepted).append((v, reason))
+    if rejected:
+        stats.provider_rejections += 1
+
+    relevant = [v for v, _ in accepted if v.direction != Direction.UNRELATED]
+    rej = [(v, r) for v, r in rejected if v.assumption_id in valid]
+    multi = len({v.assumption_id for v in relevant} | {v.assumption_id for v, _ in rej}) > 1
+    out: list[Assessment] = []
+    seen: set[str] = set()
+    for v, reason in rej:
+        if v.assumption_id in seen:
+            continue
+        seen.add(v.assumption_id)
+        out.append(conservative("model_rejected", f"模型输出未通过校验，已拒绝：{reason}", v.assumption_id,
+                                v.model_dump(mode="json"), v.assumption_id if multi else ""))
+    for v in relevant:
+        if v.assumption_id in seen:
+            continue
+        seen.add(v.assumption_id)
+        gates = ["结构校验：通过", "引用校验：引用的证据编号均属于本次变化" if v.cited_evidence_ids else "引用校验：未引用证据"]
+        direction, tentative, conf = v.direction, None, _cap(v.confidence, "medium")
+        kind = CHANGE_KIND.get(v.change_kind, v.change_kind)
+        if direction in (Direction.SUPPORTS, Direction.WEAKENS):
+            own = [s for s in outcome.signals if s.assumption_id == v.assumption_id]
+            why = None
+            if injected:
+                why = "提示注入核对：变化内容中含有疑似针对模型的指令，模型建议不据此定向"
+            elif getattr(match, "weak", False):
+                why = f"主体核对：只命中了简称「{'、'.join(match.entity_hits)}」，需要人工确认是否为研究对象"
+            elif v.change_kind != "new_fact":
+                why = f"变化类型门槛：模型判断这是「{kind}」，不是新出现的事实，系统不据此定向"
+            elif not t.meaningful_added:
+                why = "差异核对：模型称为新事实，但本次变化没有新增内容（只有删除），与差异不符"
+            elif any(s.negated for s in own):
+                why = "否定语境核对：规则层发现该假设的信号前有否定词，与模型的判断不一致"
+            elif own and {("supports" if s.polarity == "support" else "weakens") for s in own if s.side == "added"} - {direction.value}:
+                why = "信号核对：规则层命中的信号方向与模型建议相反"
+            if why:
+                # the model's direction stays in model_suggestion only: a gated suggestion must not
+                # count as an effective direction in conflict or cross-batch handling
+                gates.append(why + "，降为待核实")
+                direction, conf = Direction.INSUFFICIENT, "low"
+            else:
+                gates.append(f"变化类型门槛：模型判断为「{kind}」，允许定向")
+        a = _new(event, thesis, evidence, id_suffix=v.assumption_id if multi else "", direction=direction,
+                 tentative_direction=tentative, basis=basis, provider_name=provider.name,
+                 assumption_id=v.assumption_id, rationale=notes, model_rationale=v.rationale,
+                 matched_signals=[s.describe() for s in outcome.signals if s.assumption_id == v.assumption_id],
+                 confidence=conf, change_kind=v.change_kind, model_suggestion=v.model_dump(mode="json"),
+                 judgement_source="mock" if provider.is_mock else "model_validated", gate_log=gates,
+                 review_status="pending_human", limitations=list(limits),
+                 open_questions=["该判断来自 Mock / 协议桩（人工预置），不是真实模型推理，需研究员确认" if provider.is_mock
+                                 else "该判断以模型建议为基础并经规则校验，需研究员确认"])
+        out.append(a)
+    if not out:
+        # every verdict was "unrelated" (or nothing usable came back)
+        if accepted:
+            v = accepted[0][0]
+            out.append(_new(event, thesis, evidence, direction=Direction.UNRELATED, basis=basis,
+                            provider_name=provider.name, rationale=notes, model_rationale=v.rationale,
+                            confidence="low", change_kind=v.change_kind, model_suggestion=v.model_dump(mode="json"),
+                            judgement_source="mock" if provider.is_mock else "model_validated",
+                            gate_log=["结构校验：通过", "模型认为与所有关键假设无关"], review_status="not_required",
+                            limitations=list(limits)))
+        else:
+            reasons = "；".join(dict.fromkeys(r for _, r in rejected)) or "模型没有给出任何结论"
+            out.append(conservative("model_rejected", f"模型输出未通过校验，已拒绝：{reasons}"))
+    return out
+
+
 def _apply_gates(a: Assessment, event: ChangeEvent, evidence: Evidence, stats: AssessStats) -> Assessment:
     upd: dict = {}
     limitations = list(a.limitations)
@@ -131,6 +277,8 @@ def _apply_gates(a: Assessment, event: ChangeEvent, evidence: Evidence, stats: A
 
     if a.direction in (Direction.SUPPORTS, Direction.WEAKENS) and evidence.grade not in DECISIVE_GRADES:
         stats.grade_downgrades += 1
+        if a.judgement_source:
+            upd["gate_log"] = a.gate_log + [f"证据等级门槛：来源等级 {evidence.grade.value} 不足以单独定向，降为待核实"]
         upd["tentative_direction"] = a.direction
         upd["direction"] = Direction.INSUFFICIENT
         limitations.append(f"来源等级 {evidence.grade.value} 不足以单独支撑方向判断")
@@ -181,6 +329,10 @@ def assess_event(event: ChangeEvent, t: TriageResult, evidence: Evidence, theses
                          matched_signals=[s.describe() for s in own],
                          confidence="high" if evidence.grade.value == "A" else "medium")
                 out.append(_apply_gates(a, event, evidence, stats))
+            continue
+        elif provider is not None and getattr(provider, "protocol", "single") == "multi":
+            out.extend(_apply_gates(x, event, evidence, stats)
+                       for x in _from_model_multi(event, t, evidence, match, outcome, provider, stats))
             continue
         else:
             a = _from_model(event, t, evidence, match, outcome, provider, stats)

@@ -10,7 +10,7 @@ import json
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
 
 class _Strict(BaseModel):
@@ -163,6 +163,8 @@ class Thesis(_Strict):
     owner: str
     fictional: bool
     sources: list[ThesisSource] = Field(default_factory=list)
+    # R6.1: aliases that alone do not establish the subject (they need human confirmation)
+    ambiguous_entities: list[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -217,6 +219,25 @@ class Assessment(_Strict):
     # R1 never changes a thesis on its own. A human decides; we only recommend a review.
     thesis_status_change: Literal["none"] = "none"
     verification: dict | None = None   # R3: summary of the evidence-gathering run for this item
+    # R6 (model layer, multi-assumption protocol). Omitted from serialized output while unset, so
+    # records written before R6 and rule-only runs keep their exact form.
+    judgement_source: Literal["rule", "model_validated", "model_rejected", "model_failed", "model_skipped",
+                              "mock", "no_model"] | None = None
+    change_kind: str | None = None             # the model's classification of the change, as given
+    model_suggestion: dict | None = None       # the raw model verdict for this assumption, before any gate
+    gate_log: list[str] = Field(default_factory=list)   # checks applied on the way to `direction`
+    review_status: Literal["pending_human", "not_required"] | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_r6(self, handler):
+        data = handler(self)
+        for k in _R6_ASSESSMENT_KEYS:
+            if data.get(k) in (None, []):
+                data.pop(k, None)
+        return data
+
+
+_R6_ASSESSMENT_KEYS = ("judgement_source", "change_kind", "model_suggestion", "gate_log", "review_status")
 
 
 class JudgementRecord(_Strict):

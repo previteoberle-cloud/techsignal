@@ -7,4 +7,4 @@ layer is a replaceable interface exercised with a Mock replay and a local protoc
 background monitoring, and a UI for editing theses. See README.md and docs/.
 """
 
-__version__ = "0.5.0"
+__version__ = "0.6.1"

@@ -1,4 +1,4 @@
-"""TechSignal 研究工作台（Streamlit）。
+"""TechSignal 信息采集工作台（Streamlit）。首页是信息采集；研究判断功能在「高级研究」入口。
 
 启动：  python -m techsignal.workbench          （等同于 streamlit run 本文件）
 不需要网络、Docker 或模型密钥即可展示已保存的真实案例；只有点击「在线连接」相关按钮时才会访问网络。
@@ -15,8 +15,10 @@ from techsignal.workbench.replay import fetch_live, replay_case
 
 PAGES = ["总览", "管理层速览", "研究判断", "变化时间线", "补证过程", "证据详情"]
 MODES = ["历史实测演示", "离线回放", "在线连接"]
+WORKSPACES = ["信息采集", "示例案例", "我的研究项目"]
+WORKSPACE_ZH = {"信息采集": "信息采集", "示例案例": "高级研究·示例案例", "我的研究项目": "高级研究·研究项目"}
 
-st.set_page_config(page_title="TechSignal 研究工作台", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="TechSignal 信息采集", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
 <style>
@@ -62,10 +64,25 @@ def cases_root() -> Path:
 # Sidebar
 # ---------------------------------------------------------------------------
 
+with st.sidebar:
+    st.markdown("### TechSignal 信息采集")
+    st.caption("采集硬科技企业、行业和技术领域的公开信息，去重归档，可搜索、可导出。")
+    workspace = st.radio("工作区", WORKSPACES, key="workspace", format_func=WORKSPACE_ZH.get,
+                         help="信息采集：日常使用的首页。高级研究：基于研究判断的研判功能（可选），"
+                              "包括已保存的真实案例和你自己建立的研究项目。")
+
+if workspace == "信息采集":
+    from techsignal.workbench.collector_ui import render as render_collector
+    render_collector()
+    st.stop()
+
+if workspace == "我的研究项目":
+    from techsignal.workbench.projects_ui import render as render_projects
+    render_projects()
+    st.stop()
+
 cases, problems = vm.discover_cases(cases_root())
 with st.sidebar:
-    st.markdown("### TechSignal 研究工作台")
-    st.caption("跟踪硬科技公司公开信息的变化，判断它对既有研究结论的影响。")
     if not cases:
         st.error("没有找到可用的研究案例。")
         for p in problems:
