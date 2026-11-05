@@ -109,6 +109,22 @@ macOS 和 Linux 可以用 cron 执行同一条命令，例如：
 0 */6 * * * /路径/.venv/bin/python -m techsignal.collector collect-all
 ```
 
+### 可选：DeepSeek AI 信息整理（默认关闭）
+
+在「信息采集」页展开「可选：使用 DeepSeek 整理」，可以为尚未整理的信息生成中文摘要、相关性（相关 / 无关 / 不确定）和主题分类（产品发布 / 技术进展 / 企业合作 / 融资动态 / 行业政策 / 其他）。
+
+- **定位：** 只做信息整理，不做投资研判。结果单独保存，不改动原始采集内容，并标注「AI 生成，仅供信息整理，请以原始来源为准」。
+- **API Key：** 在页面输入（只保存在本次浏览器会话的内存里），或设置环境变量 `TECHSIGNAL_DEEPSEEK_API_KEY`。两者都有时，页面输入优先。密钥不会写入任何文件或日志。
+- **费用控制：**
+  - 只有点击按钮才会调用，计划任务和 `collect-all` 永远不会调用；
+  - 每次最多 5 条，每条输入约 2000 字符以内，输出不超过 400 tokens；
+  - 失败时最多重试一次；
+  - 已整理的内容会缓存复用；只有勾选「重新生成」才会再次付费调用。
+- **模型：** 默认 `deepseek-flash`，可选 `deepseek-v4-pro`。
+- **真实 API 验证：** 在自己的电脑上设置环境变量后，执行 `python -m techsignal.collector_ai verify`，会用一条公开测试文本真实调用一次。**本项目开发环境中没有密钥，真实调用状态为 NOT RUN。**
+
+详见 [docs/DEEPSEEK_COLLECTOR_HANDOFF.md](docs/DEEPSEEK_COLLECTOR_HANDOFF.md)。
+
 ### 已经验证过的真实来源
 
 | 来源 | 验证方式 | 结果 |

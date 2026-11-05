@@ -581,19 +581,24 @@ CSV_FIELDS = ["title", "url", "source_name", "published_at", "fetched_at", "keyw
 CSV_HEADER_ZH = ["标题", "原始链接", "来源", "发布时间", "抓取时间", "命中关键词", "摘要", "类型", "来源网址", "条目编号"]
 
 
-def to_csv(items: list[Item]) -> bytes:
-    """UTF-8 with BOM so that Excel on Windows opens Chinese text correctly."""
+def to_csv(items: list[Item], ai: dict | None = None) -> bytes:
+    """UTF-8 with BOM so that Excel on Windows opens Chinese text correctly. `ai` (item_id -> stored AI
+    result) adds the AI columns from results that ALREADY exist; exporting never calls the API."""
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(CSV_HEADER_ZH)
+    w.writerow(CSV_HEADER_ZH + (["AI 摘要（AI 生成，以原始来源为准）", "AI 相关性", "AI 分类", "AI 模型"] if ai is not None else []))
     for it in items:
         row = it.model_dump()
         row["keyword_hits"] = "、".join(it.keyword_hits)
-        w.writerow([row[f] if row[f] is not None else "" for f in CSV_FIELDS])
+        extra = []
+        if ai is not None:
+            r = ai.get(it.item_id)
+            extra = [r.summary_zh, r.relevance, r.category, r.model] if r else ["", "", "", ""]
+        w.writerow([row[f] if row[f] is not None else "" for f in CSV_FIELDS] + extra)
     return ("﻿" + buf.getvalue()).encode("utf-8")
 
 
-def to_markdown(items: list[Item], title: str = "TechSignal 信息采集导出") -> str:
+def to_markdown(items: list[Item], title: str = "TechSignal 信息采集导出", ai: dict | None = None) -> str:
     lines = [f"# {title}", "", f"导出时间：{now_iso()}，共 {len(items)} 条", ""]
     for it in items:
         lines.append(f"## [{it.title}]({it.url})")
@@ -603,6 +608,10 @@ def to_markdown(items: list[Item], title: str = "TechSignal 信息采集导出")
         lines.append("　·　".join(meta))
         if it.summary:
             lines += ["", "> " + it.summary.replace("\n", "\n> ")]
+        r = (ai or {}).get(it.item_id)
+        if r:
+            lines += ["", f"**AI 摘要**（{r.model}，AI 生成，仅供信息整理，请以原始来源为准）：{r.summary_zh}"
+                          f"　相关性：{r.relevance}　分类：{r.category}"]
         lines.append("")
     return "\n".join(lines)
 

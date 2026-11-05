@@ -78,3 +78,30 @@ def test_advanced_research_is_still_reachable(env):
     at = AppTest.from_file(APP, default_timeout=120).run()
     at.radio(key="workspace").set_value("我的研究项目").run()
     assert not at.exception and "新建研究项目" in _text(at)
+
+
+def test_ai_panel_is_optional_and_shows_results(env, monkeypatch):
+    """No key: the feed works and the AI panel says so. With stored results: the expander and the
+    disclaimer are shown. (The API itself is covered by tests/test_collector_ai.py with a mock.)"""
+    import json as _json
+    from techsignal import collector_ai as A
+    site, root = env
+    monkeypatch.delenv(A.KEY_ENV, raising=False)
+    site.put("/rss", (FIX / "rss_v1.xml").read_bytes())
+    store = C.CollectorStore(root, allow_private_urls=True)
+    t = store.create_task("AI 芯片", "Tenstorrent", "", f"{site.base}/rss 芯片新闻")
+    store.collect(t.task_id)
+    at = AppTest.from_file(APP, default_timeout=120).run()
+    assert "密钥来源：未配置" in _text(at)
+    at.button(key="ds_run").click().run()
+    assert A.KEY_ENV in _text(at) and "共 2 条" in _text(at)          # clear error, feed intact
+    it = store.items(t.task_id)[0]
+    rec = {"item_id": it.item_id, "fingerprint": it.fingerprint, "processed_at": "2026-11-05T00:00:00Z",
+           "model": "deepseek-flash", "prompt_version": A.PROMPT_VERSION, "summary_zh": "测试摘要",
+           "relevance": "相关", "category": "产品发布", "reason": "命中关键词"}
+    f = A._file(store, t.task_id)
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(_json.dumps(rec, ensure_ascii=False) + "\n", encoding="utf-8")
+    at = AppTest.from_file(APP, default_timeout=120).run()
+    assert any(e.label == "AI 摘要｜相关｜产品发布" for e in at.expander)
+    assert "测试摘要" in _text(at) and "AI 生成，仅供信息整理" in _text(at)

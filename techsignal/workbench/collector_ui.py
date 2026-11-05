@@ -7,6 +7,7 @@ from datetime import date
 import streamlit as st
 
 from techsignal import collector as C
+from techsignal import collector_ai as A
 
 ALL, NEW = "__all__", "__new__"
 PAGES = ["信息流", "采集状态", "任务设置"]
@@ -115,6 +116,7 @@ def _feed(store: C.CollectorStore, tasks: list[C.Task]) -> None:
     last = [s.last_success for t in tasks for s in store.status(t.task_id).values() if s.last_success]
     c2.caption("最近一次成功采集：" + (_t(max(last)) if last else "尚未采集"))
 
+    _ai_panel(store, tasks)
     items = [i for tid in ids for i in store.items(tid)]
     items.sort(key=lambda i: (i.published_at or i.fetched_at, i.fetched_at), reverse=True)
     if not items:
@@ -135,10 +137,13 @@ def _feed(store: C.CollectorStore, tasks: list[C.Task]) -> None:
                            since=since.isoformat() if isinstance(since, date) else None,
                            until=until.isoformat() if isinstance(until, date) else None,
                            keyword=None if kw == "（全部）" else kw)
+    ai_map = {}
+    for t in tasks:
+        ai_map.update(A.latest(store, t.task_id))
     e1, e2, e3 = st.columns([1.2, 1.4, 3])
-    e1.download_button("导出 CSV", data=C.to_csv(shown), file_name="techsignal_items.csv", mime="text/csv",
-                       key="export_csv")
-    e2.download_button("导出 Markdown", data=C.to_markdown(shown).encode("utf-8"), file_name="techsignal_items.md",
+    e1.download_button("导出 CSV", data=C.to_csv(shown, ai=ai_map if ai_map else None), file_name="techsignal_items.csv",
+                       mime="text/csv", key="export_csv")
+    e2.download_button("导出 Markdown", data=C.to_markdown(shown, ai=ai_map).encode("utf-8"), file_name="techsignal_items.md",
                        mime="text/markdown", key="export_md")
     e3.caption(f"共 {len(items)} 条，筛选后 {len(shown)} 条（导出筛选后的结果）")
     for it in shown[:200]:
@@ -152,8 +157,44 @@ def _feed(store: C.CollectorStore, tasks: list[C.Task]) -> None:
                 st.markdown("".join(f'<span class="ts-tag">{k}</span>' for k in it.keyword_hits), unsafe_allow_html=True)
             if it.summary:
                 st.markdown(f'<div class="ts-line">{it.summary[:300]}</div>', unsafe_allow_html=True)
+            r = ai_map.get(it.item_id)
+            if r:
+                with st.expander(f"AI 摘要｜{r.relevance}｜{r.category}"):
+                    st.markdown(r.summary_zh)
+                    st.caption(f"理由：{r.reason}　·　{r.model}　·　{_t(r.processed_at)}　·　{A.DISCLAIMER}")
     if len(shown) > 200:
         st.caption(f"只显示前 200 条，共 {len(shown)} 条；可用筛选或导出查看全部。")
+
+
+def _ai_panel(store: C.CollectorStore, tasks: list[C.Task]) -> None:
+    """Optional DeepSeek organisation. Off unless the user clicks; the key stays in session memory."""
+    ss = st.session_state
+    with st.expander("可选：使用 DeepSeek 整理（中文摘要、相关性、分类）"):
+        st.warning("点击后，所选信息的标题、来源、网址和摘录会发送给 DeepSeek 处理，按调用计费。"
+                   f"每次最多处理 {A.MAX_BATCH} 条尚未整理的信息；已整理过的不会重复调用。")
+        key = st.text_input("DeepSeek API Key（只保存在本次浏览器会话内存中）", type="password",
+                            value=ss.get("_ds_key", ""), key="ds_key")
+        ss["_ds_key"] = key
+        _, where = A.resolve_key(key)
+        st.caption(f"密钥来源：{where}（页面输入优先于环境变量 {A.KEY_ENV}）")
+        model = st.selectbox("模型", list(A.MODELS), key="ds_model")
+        regen = st.checkbox("重新生成（会再次付费调用）", key="ds_regen")
+        if st.button("使用 DeepSeek 整理", key="ds_run"):
+            msgs = []
+            for t in tasks:
+                try:
+                    r = A.enrich(store, t.task_id, api_key=key, model=model, regenerate=regen)
+                except (A.AIError, C.ProjectError) as e:
+                    msgs.append(("error", f"{t.name}：{e}"))
+                    continue
+                text = f"{t.name}：本次整理 {r['done']} 条，复用已有结果 {r['cached']} 条，请求 {r['calls']} 次"
+                if r["failed"]:
+                    text += "；失败 " + "；".join(f"{why}" for _, why in r["failed"][:3])
+                msgs.append(("warning" if r["failed"] else "success", text))
+            ss["_ds_msgs"] = msgs
+        for kind, text in ss.get("_ds_msgs", []):
+            getattr(st, kind)(text)
+        st.caption(A.DISCLAIMER)
 
 
 def _status(store: C.CollectorStore, tasks: list[C.Task]) -> None:
